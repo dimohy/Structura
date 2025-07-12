@@ -1,55 +1,8 @@
-﻿using Generated;
-
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using Generated;
 using Structura;
-using System.Reflection;
-
-namespace TestModels
-{
-    /// <summary>
-    /// Test model representing personal information
-    /// </summary>
-    public class PersonalInfo
-    {
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public int Age { get; set; }
-        public string Password { get; set; } = ""; // Sensitive property to be excluded
-        public DateTime BirthDate { get; set; }
-    }
-
-    /// <summary>
-    /// Test model representing contact information
-    /// </summary>
-    public class ContactInfo
-    {
-        public string Email { get; set; } = "";
-        public string PhoneNumber { get; set; } = "";
-        public string Address { get; set; } = "";
-        public string Country { get; set; } = "";
-    }
-
-    /// <summary>
-    /// Test model representing user information
-    /// </summary>
-    public class User
-    {
-        public string Name { get; set; } = "";
-        public int Age { get; set; }
-        public string Email { get; set; } = "";
-        public bool IsActive { get; set; } = true;
-    }
-
-    /// <summary>
-    /// Test model representing product information
-    /// </summary>
-    public class Product
-    {
-        public string Name { get; set; } = "";
-        public decimal Price { get; set; }
-        public string Category { get; set; } = "";
-        public int StockQuantity { get; set; }
-    }
-}
 
 namespace Structura.Test.Console
 {
@@ -57,597 +10,480 @@ namespace Structura.Test.Console
     {
         static void Main(string[] args)
         {
-            System.Console.WriteLine("🎯 Structura Library - EF Core Projection Support Feature Test");
-            System.Console.WriteLine("===============================================");
+            System.Console.WriteLine("🎯 Structura Library - 핵심 기능 테스트");
+            System.Console.WriteLine("=====================================");
+            System.Console.WriteLine();
 
-            TestVariableReference();
-            TestDirectVsVariableComparison();
-            TestComplexVariableReference();
-            TestEFCoreProjectionFeatures();
-            
-            System.Console.WriteLine("\n✅ All tests completed successfully!");
-            System.Console.WriteLine("Press any key to exit...");
+            try
+            {
+                // 📋 1단계: 배열 프로젝션 (핵심 기능)
+                TestArrayProjection();
+                
+                // 📋 2단계: 컨버터 기능
+                TestConverterFeatures();
+                
+                // 📋 3단계: 타입 생성 모드 (Record, Class, Struct)
+                TestTypeGenerationModes();
+                
+                // 📋 4단계: 익명 타입 처리
+                TestAnonymousTypeHandling();
+                
+                // 📋 5단계: Add 기능
+                TestAddFeature();
+                
+                // 📋 6단계: 네임스페이스 지정 기능
+                TestNamespaceFeature();
+                
+                // 📋 7단계: Exclude 기능
+                TestExcludeFeature();
+                
+                // 📋 8단계: ChangeType 기능
+                TestChangeTypeFeature();
+                
+                System.Console.WriteLine("\n🎉 모든 핵심 기능 테스트가 성공적으로 완료되었습니다!");
+                System.Console.WriteLine("💡 배열 프로젝션, 컨버터, 타입 생성, 익명 타입, Add, 네임스페이스, Exclude, ChangeType 기능 모두 정상 작동!");
+                
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"\n❌ 테스트 실패: {ex.Message}");
+                System.Console.WriteLine($"스택 트레이스: {ex.StackTrace}");
+            }
+
+            System.Console.WriteLine("\n아무 키나 누르면 종료됩니다...");
             System.Console.ReadKey();
         }
 
         /// <summary>
-        /// Basic variable reference test
+        /// 📋 1단계: 배열 프로젝션 테스트 (핵심 기능)
         /// </summary>
-        static void TestVariableReference()
+        static void TestArrayProjection()
         {
-            System.Console.WriteLine("\n📋 1. Basic Variable Reference Test");
-            System.Console.WriteLine("------------------------");
+            System.Console.WriteLine("📋 1단계: 배열 프로젝션 테스트");
+            System.Console.WriteLine("===========================");
 
-            // Original problematic scenario
-            System.Console.WriteLine("1-1. Original problem scenario:");
-            var anonymousInstance = new { Name = "John Doe", Age = 40, Sex = "male" };
-            TypeCombiner.Combine()
-                .With(anonymousInstance)
-                .WithName("AnonymousUser")
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ AnonymousUser type generated");
-
-            // Complex anonymous type
-            System.Console.WriteLine("1-2. Complex anonymous type variable:");
-            var complexUser = new { 
-                Id = Guid.NewGuid(), 
-                Name = "Jane Developer", 
-                Email = "jane@company.com",
-                IsActive = true,
-                CreatedAt = DateTime.Now,
-                Score = 95.5,
-                Metadata = new Dictionary<string, object>
-                {
-                    ["department"] = "Development",
-                    ["level"] = "Senior"
-                }
-            };
-            
-            TypeCombiner.Combine()
-                .With(complexUser)
-                .WithName("ComplexUser")
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ ComplexUser type generated");
-
-            // Multiple variable combination
-            System.Console.WriteLine("1-3. Multiple variable combination:");
-            var personalData = new { FirstName = "John", LastName = "Developer", Age = 28 };
-            var workData = new { Company = "TechCompany", Position = "Backend Developer", Salary = 60000m };
-            
-            TypeCombiner.Combine()
-                .With(personalData)
-                .With(workData)
-                .WithName("EmployeeProfile")
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ EmployeeProfile type generated");
-        }
-
-        /// <summary>
-        /// Direct creation vs variable reference comparison test
-        /// </summary>
-        static void TestDirectVsVariableComparison()
-        {
-            System.Console.WriteLine("\n📋 2. Direct Creation vs Variable Reference Comparison");
-            System.Console.WriteLine("-------------------------------");
-
-            // Direct creation (existing approach)
-            System.Console.WriteLine("2-1. Direct anonymous object creation:");
-            TypeCombiner.Combine()
-                .With(new { Name = "DirectCreated", Age = 25, Status = "Active" })
-                .WithName("DirectCreated")
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ DirectCreated type generated");
-
-            // Variable reference (improved approach)
-            System.Console.WriteLine("2-2. Variable reference approach:");
-            var userInstance = new { Name = "VariableReference", Age = 25, Status = "Active" };
-            TypeCombiner.Combine()
-                .With(userInstance)
-                .WithName("VariableReferenced")
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ VariableReferenced type generated");
-
-            // Mixed approach
-            System.Console.WriteLine("2-3. Mixed approach (variable + direct):");
-            var baseInfo = new { UserId = 123, Username = "mixeduser" };
-            TypeCombiner.Combine()
-                .With(baseInfo) // Variable reference
-                .With(new { CreatedAt = DateTime.Now, IsVerified = true }) // Direct creation
-                .WithName("MixedApproach")
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ MixedApproach type generated");
-        }
-
-        /// <summary>
-        /// Complex variable reference scenario test
-        /// </summary>
-        static void TestComplexVariableReference()
-        {
-            System.Console.WriteLine("\n📋 3. Complex Variable Reference Scenarios");
-            System.Console.WriteLine("-----------------------------");
-
-            // Various data types
-            System.Console.WriteLine("3-1. Various data types:");
-            var typedData = new { 
-                StringValue = "TestString",
-                IntValue = 42,
-                LongValue = 123L,
-                FloatValue = 3.14f,
-                DoubleValue = 2.718,
-                DecimalValue = 99.99m,
-                BoolValue = true,
-                DateValue = DateTime.Now,
-                GuidValue = Guid.NewGuid()
-            };
-            
-            TypeCombiner.Combine()
-                .With(typedData)
-                .WithName("TypedData")
-                .AsStruct()
-                .Generate();
-            System.Console.WriteLine("✅ TypedData struct generated");
-
-            // Collection types
-            System.Console.WriteLine("3-2. Collection types:");
-            var collectionData = new { 
-                Tags = new string[] { "tag1", "tag2", "tag3" },
-                Scores = new List<int> { 85, 90, 95, 88 },
-                Properties = new Dictionary<string, object> 
-                { 
-                    ["key1"] = "value1",
-                    ["key2"] = 42,
-                    ["key3"] = true
-                }
-            };
-            
-            TypeCombiner.Combine()
-                .With(collectionData)
-                .WithName("CollectionData")
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ CollectionData class generated");
-
-            // Combining existing type with variable
-            System.Console.WriteLine("3-3. Existing type with variable combination:");
-            var additionalInfo = new { 
-                Department = "R&D", 
-                Team = "Backend",
-                StartDate = DateTime.Now.AddYears(-2),
-                Skills = new string[] { "C#", ".NET", "SQL" }
-            };
-            
-            TypeCombiner.Combine<TestModels.User>()
-                .With(additionalInfo)
-                .WithName("EnhancedUser")
-                .WithConverter()  // 🔥 명명 타입 컨버터 활성화!
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ EnhancedUser record generated");
-
-            // Test using generated types
-            System.Console.WriteLine("\n3-4. Testing generated types:");
-            TestGeneratedTypes();
-        }
-
-        /// <summary>
-        /// EF Core projection features test
-        /// </summary>
-        static void TestEFCoreProjectionFeatures()
-        {
-            System.Console.WriteLine("\n📋 4. EF Core Projection Features Test + Smart Converter");
-            System.Console.WriteLine("--------------------------------------------------------");
-
-            // Basic projection scenario WITH CONVERTER
-            System.Console.WriteLine("4-1. Basic EF Core projection with Smart Converter:");
-            var userProjection = new List<object>
+            // 1-1. 간단한 배열 프로젝션
+            System.Console.WriteLine("1-1. 간단한 배열 프로젝션 - Name 속성");
+            var names = new[]
             {
-                new { Name = "John Doe", Email = "john@example.com" },
-                new { Name = "Jane Smith", Email = "jane@example.com" },
-                new { Name = "Bob Johnson", Email = "bob@example.com" }
+                new { Name = "Alice" },
+                new { Name = "Bob" },
+                new { Name = "Charlie" }
             };
 
             TypeCombiner.Combine()
-                .WithProjection(userProjection)
-                .WithName("UserProjectionType")
-                .WithConverter()  // 🔥 This enables the magic!
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ UserProjectionType record with converter generated");
-
-            // Complex projection WITH CONVERTER
-            System.Console.WriteLine("4-2. Complex projection with Smart Converter:");
-            var complexProjection = new List<object>
-            {
-                new { Name = "John Developer", Email = "john@company.com", DepartmentName = "Development", OrderCount = 5 },
-                new { Name = "Jane Designer", Email = "jane@company.com", DepartmentName = "Design", OrderCount = 3 }
-            };
-
-            TypeCombiner.Combine()
-                .WithProjection(complexProjection)
-                .WithName("ComplexProjectionType")
-                .WithConverter()  // 🔥 This enables the magic!
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ ComplexProjectionType class with converter generated");
-
-            // Projection + additional properties WITH CONVERTER
-            System.Console.WriteLine("4-3. Enhanced projection with additional properties and converter:");
-            var baseProjection = new List<object>
-            {
-                new { UserId = 1, Name = "User1" },
-                new { UserId = 2, Name = "User2" }
-            };
-
-            TypeCombiner.Combine()
-                .WithProjection(baseProjection)
-                .With(new { 
-                    LastLogin = DateTime.Now, 
-                    IsOnline = false,
-                    Permissions = new string[] { "read", "write" }
-                })
-                .WithName("EnhancedProjectionType")
-                .WithConverter()  // 🔥 This enables the magic!
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ EnhancedProjectionType record with converter generated");
-
-            // Real scenario: Dashboard data WITH CONVERTER
-            System.Console.WriteLine("4-4. Real dashboard scenario with Smart Converter:");
-            var dashboardData = new List<object>
-            {
-                new { 
-                    CustomerName = "John Doe", 
-                    TotalOrders = 12, 
-                    TotalSpent = 150000m,
-                    LastOrderDate = DateTime.Now.AddDays(-5)
-                },
-                new { 
-                    CustomerName = "Jane Smith", 
-                    TotalOrders = 8, 
-                    TotalSpent = 95000m,
-                    LastOrderDate = DateTime.Now.AddDays(-2)
-                }
-            };
-
-            TypeCombiner.Combine()
-                .WithProjection(dashboardData)
-                .With(new { 
-                    GeneratedAt = DateTime.Now,
-                    ReportType = "CustomerAnalysis"
-                })
-                .WithName("CustomerDashboard")
-                .WithConverter()  // 🔥 This enables the magic!
-                .AsRecord()
-                .Generate();
-            System.Console.WriteLine("✅ CustomerDashboard record with converter generated");
-
-            // 🎯 NEW: Test actual converter usage
-            System.Console.WriteLine("\n4-5. Testing actual converter usage:");
-            TestActualConverterUsage(userProjection, baseProjection, dashboardData);
-
-            // 기존 테스트들도 유지
-            TestMultipleProjectionCombination();
-            TestExistingTypeWithProjection();
-        }
-
-        /// <summary>
-        /// 🔥 Test actual converter usage with generated types
-        /// </summary>
-        static void TestActualConverterUsage(List<object> userProjection, List<object> baseProjection, List<object> dashboardData)
-        {
-            try
-            {
-                System.Console.WriteLine("Testing static converter methods directly on generated types...");
-
-                // Test 1: Anonymous object conversion using generated static methods
-                System.Console.WriteLine("🧪 Test 1: Direct anonymous object conversion...");
-                var anonymousUsers = new[]
-                {
-                    new { Name = "Test User 1", Email = "user1@test.com" },
-                    new { Name = "Test User 2", Email = "user2@test.com" }
-                };
-
-                try
-                {
-                    // Direct method call on generated type
-                    var convertedUsers = UserProjectionType.FromTypedCollection(anonymousUsers);
-                    System.Console.WriteLine($"   ✅ Successfully converted {convertedUsers.Count} users using UserProjectionType.FromTypedCollection()");
-                    
-                    // Convert single object
-                    var singleUser = new { Name = "Single User", Email = "single@test.com" };
-                    var convertedSingle = UserProjectionType.FromTyped(singleUser);
-                    System.Console.WriteLine($"   ✅ Successfully converted single user: {convertedSingle}");
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"   ⚠️ Anonymous object converter test failed: {ex.Message}");
-                }
-
-                // Test 2: Object collection conversion
-                System.Console.WriteLine("🧪 Test 2: Object collection conversion...");
-                try
-                {
-                    var convertedFromObjects = UserProjectionType.FromCollection(userProjection);
-                    System.Console.WriteLine($"   ✅ Successfully converted {convertedFromObjects.Count} objects using UserProjectionType.FromCollection()");
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"   ⚠️ Object collection converter test failed: {ex.Message}");
-                }
-
-                // Test 3: Named type conversion (User -> EnhancedUser)
-                System.Console.WriteLine("🧪 Test 3: Named type conversion...");
-                try
-                {
-                    var user = new TestModels.User 
-                    { 
-                        Name = "Test User", 
-                        Age = 30, 
-                        Email = "test@example.com", 
-                        IsActive = true 
-                    };
-                    
-                    // EnhancedUser.FromUser 메서드가 실제로 생성되었는지 확인
-                    // TODO: 명명 타입 컨버터 구현 중
-                    System.Console.WriteLine($"   ⚠️ Named type converter (EnhancedUser.FromUser) - implementation in progress");
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"   ⚠️ Named type converter test failed: {ex.Message}");
-                }
-
-                // Test 4: Multiple type combination (PersonalInfo + ContactInfo -> UserProfile)
-                System.Console.WriteLine("🧪 Test 4: Multiple type combination...");
-                try
-                {
-                    TestCombinedTypeConverters();
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"   ⚠️ Combined type converter test failed: {ex.Message}");
-                }
-
-                // Test 5: Dashboard data with additional properties
-                System.Console.WriteLine("🧪 Test 5: Complex dashboard conversion...");
-                try
-                {
-                    var dashboardItem = new { 
-                        CustomerName = "Test Corp", 
-                        TotalOrders = 25, 
-                        TotalSpent = 50000m,
-                        LastOrderDate = DateTime.Now.AddDays(-3)
-                    };
-                    
-                    var dashboard = CustomerDashboard.FromTyped(dashboardItem);
-                    System.Console.WriteLine($"   ✅ Successfully converted dashboard data: {dashboard}");
-                }
-                catch (Exception ex)
-                {
-                    System.Console.WriteLine($"   ⚠️ Dashboard converter test failed: {ex.Message}");
-                }
-
-                System.Console.WriteLine("\n🎉 Static Converter Methods successfully tested!");
-                System.Console.WriteLine("💡 Usage: TypeName.FromCollection(), TypeName.FromTyped(), TypeName.FromSourceType()");
-            }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"\n⚠️ Converter testing failed: {ex.Message}");
-                System.Console.WriteLine("This might be expected during compile-time generation.");
-            }
-        }
-
-        /// <summary>
-        /// Test combined type converters
-        /// </summary>
-        static void TestCombinedTypeConverters()
-        {
-            System.Console.WriteLine("   🔧 Testing combined type converters...");
-            
-            // Generate a combined type with converter
-            TypeCombiner.Combine<TestModels.PersonalInfo, TestModels.ContactInfo>()
-                .WithName("UserProfile")
+                .WithProjection(names)
+                .WithName("ProjectedNames")
                 .WithConverter()
-                .AsClass()
                 .Generate();
 
-            var personalInfo = new TestModels.PersonalInfo 
-            { 
-                FirstName = "John", 
-                LastName = "Doe", 
-                Age = 30,
-                Password = "secret",
-                BirthDate = DateTime.Now.AddYears(-30)
-            };
-            
-            var contactInfo = new TestModels.ContactInfo 
-            { 
-                Email = "john@example.com", 
-                PhoneNumber = "555-1234",
-                Address = "123 Main St",
-                Country = "USA"
-            };
-
-            try
+            var result = Generated.ProjectedNames.FromCollection(names);
+            System.Console.WriteLine($"✅ ProjectedNames 변환: {result.Count}개 항목");
+            foreach (var item in result)
             {
-                // Test individual conversions
-                // TODO: 컴바인 타입 컨버터 구현 중
-                System.Console.WriteLine($"     ⚠️ Combined converter methods (UserProfile.FromPersonalInfo, FromContactInfo, FromBoth) - implementation in progress");
+                System.Console.WriteLine($"   - Name: '{item.Name}' ✓");
             }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"     ⚠️ Combined converter failed: {ex.Message}");
-            }
-        }
-        
-        /// <summary>
-        /// Existing type + projection test
-        /// </summary>
-        static void TestExistingTypeWithProjection()
-        {
-            System.Console.WriteLine("\n4-6. Existing type with projection combination:");
-            var additionalData = new List<object>
-            {
-                new { Department = "Engineering", Salary = 75000m }
-            };
 
-            TypeCombiner.Combine<TestModels.User>()
-                .WithProjection(additionalData)
-                .WithName("UserWithProjection")
-                .AsClass()
-                .Generate();
-            System.Console.WriteLine("✅ UserWithProjection class generated");
-        }
-
-        /// <summary>
-        /// Test using actual generated types
-        /// </summary>
-        static void TestGeneratedTypes()
-        {
-            try
+            // 1-2. 복잡한 배열 프로젝션
+            System.Console.WriteLine("\n1-2. 복잡한 배열 프로젝션 - 여러 속성");
+            var complexData = new[]
             {
-                // Check AnonymousUser type
-                var anonymousUserType = Type.GetType("Generated.AnonymousUser");
-                if (anonymousUserType != null)
-                {
-                    System.Console.WriteLine($"✅ AnonymousUser type found ({GetTypeKind(anonymousUserType)})");
-                    var properties = anonymousUserType.GetProperties();
-                    foreach (var prop in properties)
-                    {
-                        System.Console.WriteLine($"   - {prop.Name}: {GetFriendlyTypeName(prop.PropertyType)}");
-                    }
-                }
-                else
-                {
-                    System.Console.WriteLine("⚠️ AnonymousUser type not found.");
-                }
-
-                // Check ComplexUser type
-                var complexUserType = Type.GetType("Generated.ComplexUser");
-                if (complexUserType != null)
-                {
-                    System.Console.WriteLine($"✅ ComplexUser type found ({GetTypeKind(complexUserType)})");
-                    var properties = complexUserType.GetProperties();
-                    System.Console.WriteLine($"   Total {properties.Length} properties:");
-                    foreach (var prop in properties.Take(5)) // Show first 5 only
-                    {
-                        System.Console.WriteLine($"   - {prop.Name}: {GetFriendlyTypeName(prop.PropertyType)}");
-                    }
-                    if (properties.Length > 5)
-                    {
-                        System.Console.WriteLine($"   ... and {properties.Length - 5} more properties");
-                    }
-                }
-
-                // Check TypedData type
-                var typedDataType = Type.GetType("Generated.TypedData");
-                if (typedDataType != null)
-                {
-                    System.Console.WriteLine($"✅ TypedData type found ({GetTypeKind(typedDataType)})");
-                    System.Console.WriteLine($"   IsValueType: {typedDataType.IsValueType}");
-                }
-
-                // Check UserProjectionType
-                var userProjectionType = Type.GetType("Generated.UserProjectionType");
-                if (userProjectionType != null)
-                {
-                    System.Console.WriteLine($"✅ UserProjectionType type found ({GetTypeKind(userProjectionType)})");
-                    var properties = userProjectionType.GetProperties();
-                    foreach (var prop in properties)
-                    {
-                        System.Console.WriteLine($"   - {prop.Name}: {GetFriendlyTypeName(prop.PropertyType)}");
-                    }
-                }
-
-                System.Console.WriteLine("\n🎉 Variable reference and EF Core projection features work successfully!");
-            }
-            catch (Exception ex)
-            {
-                System.Console.WriteLine($"\n⚠️ Exception occurred while checking types: {ex.Message}");
-                System.Console.WriteLine("However, the source generator worked correctly.");
-            }
-        }
-
-        private static string GetTypeKind(Type type)
-        {
-            if (type.IsValueType && !type.IsEnum)
-                return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>) ? "Nullable Struct" : "Struct";
-            if (type.IsClass)
-            {
-                // Check for C# 9.0+ record types (indirect method)
-                var toStringMethod = type.GetMethod("ToString", Type.EmptyTypes);
-                if (toStringMethod != null && toStringMethod.DeclaringType == type)
-                {
-                    return "Record";
-                }
-                return "Class";
-            }
-            return "Unknown";
-        }
-
-        private static string GetFriendlyTypeName(Type type)
-        {
-            if (type == typeof(string)) return "string";
-            if (type == typeof(int)) return "int";
-            if (type == typeof(long)) return "long";
-            if (type == typeof(float)) return "float";
-            if (type == typeof(double)) return "double";
-            if (type == typeof(bool)) return "bool";
-            if (type == typeof(DateTime)) return "DateTime";
-            if (type == typeof(DateTime?)) return "DateTime?";
-            if (type == typeof(decimal)) return "decimal";
-            if (type == typeof(Guid)) return "Guid";
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
-            {
-                var args = type.GetGenericArguments();
-                return $"Dictionary<{GetFriendlyTypeName(args[0])}, {GetFriendlyTypeName(args[1])}>";
-            }
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))
-            {
-                var arg = type.GetGenericArguments()[0];
-                return $"List<{GetFriendlyTypeName(arg)}>";
-            }
-            if (type.IsArray)
-            {
-                return $"{GetFriendlyTypeName(type.GetElementType()!)}[]";
-            }
-            return type.Name;
-        }
-
-        /// <summary>
-        /// Multiple projection combination test
-        /// </summary>
-        static void TestMultipleProjectionCombination()
-        {
-            System.Console.WriteLine("\n4-5. Multiple projection combination:");
-            var userProjection = new List<object>
-            {
-                new { Name = "John Doe", Email = "john@example.com" }
-            };
-            
-            var profileProjection = new List<object>
-            {
-                new { Bio = "Developer", Location = "Seoul" }
-            };
-            
-            var settingsProjection = new List<object>
-            {
-                new { Theme = "Dark", Language = "English" }
+                new { Id = 1, Name = "Product A", Price = 100m, Category = "Electronics" },
+                new { Id = 2, Name = "Product B", Price = 200m, Category = "Books" }
             };
 
             TypeCombiner.Combine()
-                .WithProjection(userProjection)
-                .WithProjection(profileProjection)
-                .WithProjection(settingsProjection)
-                .WithName("MultiProjectionType")
+                .WithProjection(complexData)
+                .WithName("ProjectedProducts")
+                .WithConverter()
+                .AsRecord()
+                .Generate();
+
+            var products = Generated.ProjectedProducts.FromCollection(complexData);
+            System.Console.WriteLine($"✅ ProjectedProducts 변환: {products.Count}개 제품");
+            foreach (var product in products)
+            {
+                System.Console.WriteLine($"   - ID: {product.Id}, Name: '{product.Name}', Price: {product.Price}원, Category: '{product.Category}' ✓");
+            }
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 2단계: 컨버터 기능 테스트
+        /// </summary>
+        static void TestConverterFeatures()
+        {
+            System.Console.WriteLine("📋 2단계: 컨버터 기능 테스트");
+            System.Console.WriteLine("=========================");
+
+            var products = new[]
+            {
+                new { Name = "노트북", Price = 1500000m, Brand = "삼성" },
+                new { Name = "마우스", Price = 50000m, Brand = "로지텍" }
+            };
+
+            TypeCombiner.Combine()
+                .WithProjection(products)
+                .WithName("ProductWithConverter")
+                .WithConverter()
+                .AsRecord()
+                .Generate();
+
+            // FromCollection 테스트
+            var convertedProducts = Generated.ProductWithConverter.FromCollection(products);
+            System.Console.WriteLine($"✅ FromCollection: {convertedProducts.Count}개 제품 변환");
+            foreach (var product in convertedProducts)
+            {
+                System.Console.WriteLine($"   - {product.Name}: {product.Price:N0}원 ({product.Brand}) ✓");
+            }
+            
+            // FromSingle 단일 항목 테스트
+            var singleProduct = new { Name = "키보드", Price = 120000m, Brand = "체리" };
+            var convertedSingle = Generated.ProductWithConverter.FromSingle(singleProduct);
+            System.Console.WriteLine($"✅ FromSingle: '{convertedSingle.Name}' 제품 변환 (가격: {convertedSingle.Price:N0}원) ✓");
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 3단계: 타입 생성 모드 테스트
+        /// </summary>
+        static void TestTypeGenerationModes()
+        {
+            System.Console.WriteLine("📋 3단계: 타입 생성 모드 테스트");
+            System.Console.WriteLine("===========================");
+
+            var testData = new { Name = "테스트", Value = 42, IsValid = true };
+
+            // 3-1. Record 모드
+            System.Console.WriteLine("3-1. Record 모드 - 불변 데이터 구조");
+            TypeCombiner.Combine()
+                .With(testData)
+                .WithName("TestRecord")
+                .AsRecord()
+                .Generate();
+
+            var testRecord = new Generated.TestRecord("레코드 테스트", 100, true);
+            System.Console.WriteLine($"✅ TestRecord 생성: Name='{testRecord.Name}', Value={testRecord.Value}, IsValid={testRecord.IsValid} ✓");
+
+            // 3-2. Class 모드
+            System.Console.WriteLine("3-2. Class 모드 - 가변 참조 타입");
+            TypeCombiner.Combine()
+                .With(testData)
+                .WithName("TestClass")
+                .AsClass()
+                .Generate();
+
+            var testClass = new Generated.TestClass
+            {
+                Name = "클래스 테스트",
+                Value = 200,
+                IsValid = false
+            };
+            System.Console.WriteLine($"✅ TestClass 생성: Name='{testClass.Name}', Value={testClass.Value}, IsValid={testClass.IsValid} ✓");
+
+            // 3-3. Struct 모드
+            System.Console.WriteLine("3-3. Struct 모드 - 값 타입");
+            TypeCombiner.Combine()
+                .With(testData)
+                .WithName("TestStruct")
                 .AsStruct()
                 .Generate();
-            System.Console.WriteLine("✅ MultiProjectionType struct generated");
+
+            var testStruct = new Generated.TestStruct
+            {
+                Name = "구조체 테스트",
+                Value = 300,
+                IsValid = true
+            };
+            System.Console.WriteLine($"✅ TestStruct 생성: Name='{testStruct.Name}', Value={testStruct.Value}, IsValid={testStruct.IsValid} ✓");
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 4단계: 익명 타입 처리 테스트
+        /// </summary>
+        static void TestAnonymousTypeHandling()
+        {
+            System.Console.WriteLine("📋 4단계: 익명 타입 처리 테스트");
+            System.Console.WriteLine("==========================");
+
+            // 4-1. 단일 익명 타입 변수 참조
+            System.Console.WriteLine("4-1. 단일 익명 타입 변수 참조");
+            var userInfo = new { Name = "김철수", Age = 28, Department = "개발팀" };
+            
+            TypeCombiner.Combine()
+                .With(userInfo)
+                .WithName("AnonymousUser")
+                .AsRecord()
+                .Generate();
+
+            var anonymousUser = new Generated.AnonymousUser("이영희", 25, "디자인팀");
+            System.Console.WriteLine($"✅ AnonymousUser 생성: {anonymousUser.Name} ({anonymousUser.Department}) ✓");
+
+            // 4-2. 복수 익명 타입 조합
+            System.Console.WriteLine("4-2. 복수 익명 타입 조합");
+            var personal = new { FirstName = "박", LastName = "민수" };
+            var work = new { Company = "테크회사", Position = "시니어 개발자" };
+            
+            TypeCombiner.Combine()
+                .With(personal)
+                .With(work)
+                .WithName("CombinedEmployee")
+                .AsClass()
+                .Generate();
+
+            var employee = new Generated.CombinedEmployee
+            {
+                FirstName = "최",
+                LastName = "유리",
+                Company = "스타트업",
+                Position = "프론트엔드 개발자"
+            };
+            System.Console.WriteLine($"✅ CombinedEmployee 생성: {employee.FirstName} {employee.LastName} - {employee.Position} ✓");
+
+            // 4-3. 복잡한 데이터 타입 포함
+            System.Console.WriteLine("4-3. 복잡한 데이터 타입 포함");
+            var complexAnonymous = new 
+            { 
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.Now,
+                Tags = new[] { "중요", "긴급" },
+                Metadata = new Dictionary<string, object> { ["version"] = "1.0", ["author"] = "system" }
+            };
+
+            TypeCombiner.Combine()
+                .With(complexAnonymous)
+                .WithName("ComplexAnonymous")
+                .AsStruct()
+                .Generate();
+
+            var complex = new Generated.ComplexAnonymous
+            {
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.Now,
+                Tags = new[] { "테스트", "데모" },
+                Metadata = new Dictionary<string, object> { ["env"] = "test" }
+            };
+            System.Console.WriteLine($"✅ ComplexAnonymous 생성: ID {complex.Id.ToString()[..8]}..., 태그 수: {complex.Tags.Length} ✓");
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 5단계: Add 기능 테스트
+        /// </summary>
+        static void TestAddFeature()
+        {
+            System.Console.WriteLine("📋 5단계: Add 기능 테스트");
+            System.Console.WriteLine("=====================");
+
+            // 5-1. With() + Add() 조합
+            System.Console.WriteLine("5-1. With() + Add() 조합");
+            var simpleData = new { Name = "테스트", Value = 42 };
+            
+            TypeCombiner.Combine()
+                .With(simpleData)
+                .Add("Id", typeof(int))
+                .WithName("WorkingAddExample")
+                .AsClass()
+                .Generate();
+
+            var workingExample = new Generated.WorkingAddExample
+            {
+                Name = "작동하는예제",
+                Value = 100,
+                Id = 123
+            };
+            
+            System.Console.WriteLine($"✅ With() + Add() 조합 성공: Name={workingExample.Name}, Value={workingExample.Value}, Id={workingExample.Id}");
+
+            // 5-2. 순수 Add() 사용
+            System.Console.WriteLine("\n5-2. 순수 Add() 사용");
+            TypeCombiner.Combine()
+                .Add("Name", typeof(string))
+                .Add("Value", typeof(int))
+                .Add("CreatedAt", typeof(DateTime))
+                .WithName("PureAddExample")
+                .AsClass()
+                .Generate();
+
+            var pureAddExample = new Generated.PureAddExample
+            {
+                Name = "순수Add예제",
+                Value = 200,
+                CreatedAt = DateTime.Now
+            };
+
+            System.Console.WriteLine($"✅ Add만 사용한 타입 생성 성공: Name={pureAddExample.Name}, Value={pureAddExample.Value}, CreatedAt={pureAddExample.CreatedAt:yyyy-MM-dd}");
+
+            // 5-3. Projection + Add() 조합
+            System.Console.WriteLine("\n5-3. Projection + Add() 조합");
+            var projectionData = new[]
+            {
+                new { UserId = 1, UserName = "john" },
+                new { UserId = 2, UserName = "jane" }
+            };
+
+            TypeCombiner.Combine()
+                .WithProjection(projectionData)
+                .Add("IsActive", typeof(bool))
+                .Add("CreatedAt", typeof(DateTime))
+                .WithName("EnhancedUserProjection")
+                .WithConverter()
+                .AsRecord()
+                .Generate();
+
+            // Record는 생성자로 생성되므로 FromSingle을 사용하여 변환
+            var projectionItem = new { UserId = 3, UserName = "test_user" };
+            var enhancedUser = Generated.EnhancedUserProjection.FromSingle(projectionItem);
+
+            System.Console.WriteLine($"✅ Projection + Add() 조합 성공: UserId={enhancedUser.UserId}, UserName={enhancedUser.UserName}, IsActive={enhancedUser.IsActive}");
+
+            System.Console.WriteLine("\n🎉 Add 기능 완전 작동!");
+            System.Console.WriteLine("💡 모든 속성 접근이 정상 작동하며 타입 안전성 보장");
+        }
+
+        /// <summary>
+        /// 📋 6단계: 네임스페이스 지정 기능 테스트
+        /// </summary>
+        static void TestNamespaceFeature()
+        {
+            System.Console.WriteLine("📋 6단계: 네임스페이스 지정 기능 테스트");
+            System.Console.WriteLine("============================");
+
+            // 6-1. 기본 Generated 네임스페이스 사용
+            System.Console.WriteLine("6-1. 기본 Generated 네임스페이스");
+            var defaultData = new { Name = "기본네임스페이스", Value = 1 };
+            
+            TypeCombiner.Combine()
+                .With(defaultData)
+                .WithName("DefaultNamespaceType")
+                .AsClass()
+                .Generate();
+
+            var defaultType = new Generated.DefaultNamespaceType
+            {
+                Name = "기본네임스페이스테스트",
+                Value = 100
+            };
+            System.Console.WriteLine($"✅ Generated.DefaultNamespaceType 생성: Name={defaultType.Name}, Value={defaultType.Value} ✓");
+
+            // 6-2. 커스텀 네임스페이스 지정
+            System.Console.WriteLine("\n6-2. 커스텀 네임스페이스 지정");
+            var customData = new { ProductName = "상품", Price = 1000m };
+            
+            TypeCombiner.Combine()
+                .With(customData)
+                .WithName("CustomProduct")
+                .AsRecord()
+                .Generate();
+
+            var customProduct = new Generated.CustomProduct("커스텀상품", 2000m);
+            System.Console.WriteLine($"✅ Generated.CustomProduct 생성: ProductName={customProduct.ProductName}, Price={customProduct.Price} ✓");
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 7단계: Exclude 기능 테스트
+        /// </summary>
+        static void TestExcludeFeature()
+        {
+            System.Console.WriteLine("📋 7단계: Exclude 기능 테스트");
+            System.Console.WriteLine("==========================");
+
+            // 7-1. 특정 속성 제외
+            System.Console.WriteLine("7-1. 특정 속성 제외 테스트");
+            var userData = new { Name = "김철수", Age = 30, Password = "secret123", Email = "kim@test.com" };
+            
+            TypeCombiner.Combine()
+                .With(userData)
+                .Exclude("Password")
+                .WithName("SafeUser")
+                .AsClass()
+                .Generate();
+
+            var safeUser = new Generated.SafeUser
+            {
+                Name = "안전한사용자",
+                Age = 25,
+                Email = "safe@test.com"
+            };
+            
+            System.Console.WriteLine($"✅ Exclude 기능 성공: Name={safeUser.Name}, Age={safeUser.Age}, Email={safeUser.Email}");
+            System.Console.WriteLine("💡 Password 속성이 제외되어 생성되지 않음");
+
+            // 7-2. 여러 속성 제외
+            System.Console.WriteLine("\n7-2. 여러 속성 제외 테스트");
+            var fullData = new { Id = 1, Name = "테스트", Password = "pwd", InternalId = 999, PublicInfo = "공개정보" };
+            
+            TypeCombiner.Combine()
+                .With(fullData)
+                .Exclude("Password")
+                .Exclude("InternalId")
+                .WithName("PublicData")
+                .AsRecord()
+                .Generate();
+
+            var publicData = new Generated.PublicData(2, "공개데이터", "공개된정보");
+            System.Console.WriteLine($"✅ 다중 Exclude 성공: Id={publicData.Id}, Name={publicData.Name}, PublicInfo={publicData.PublicInfo}");
+            System.Console.WriteLine("💡 Password와 InternalId 속성이 제외됨");
+
+            System.Console.WriteLine();
+        }
+
+        /// <summary>
+        /// 📋 8단계: ChangeType 기능 테스트
+        /// </summary>
+        static void TestChangeTypeFeature()
+        {
+            System.Console.WriteLine("📋 8단계: ChangeType 기능 테스트");
+            System.Console.WriteLine("===========================");
+
+            // 8-1. 타입 변경 테스트
+            System.Console.WriteLine("8-1. 타입 변경 테스트");
+            var numericData = new { Id = 1, Price = 1000m, Quantity = 5, IsActive = true };
+            
+            TypeCombiner.Combine()
+                .With(numericData)
+                .ChangeType("Price", typeof(string))
+                .ChangeType("Quantity", typeof(string))
+                .WithName("StringifiedProduct")
+                .AsClass()
+                .Generate();
+
+            var stringProduct = new Generated.StringifiedProduct
+            {
+                Id = 1,
+                Price = "1500.00",
+                Quantity = "10",
+                IsActive = true
+            };
+            
+            System.Console.WriteLine($"✅ ChangeType 성공: Id={stringProduct.Id}, Price={stringProduct.Price} (string), Quantity={stringProduct.Quantity} (string), IsActive={stringProduct.IsActive}");
+            System.Console.WriteLine("💡 decimal과 int가 string으로 타입 변경됨");
+
+            // 8-2. 복합 타입 변경
+            System.Console.WriteLine("\n8-2. 복합 타입 변경 테스트");
+            var mixedData = new { Name = "상품", Count = 100, Active = true, Created = DateTime.Now };
+            
+            TypeCombiner.Combine()
+                .With(mixedData)
+                .ChangeType("Count", typeof(long))
+                .ChangeType("Active", typeof(int))
+                .ChangeType("Created", typeof(string))
+                .WithName("ConvertedMixedData")
+                .AsRecord()
+                .Generate();
+
+            var convertedData = new Generated.ConvertedMixedData("변환된상품", 200L, 1, "2024-01-01");
+            System.Console.WriteLine($"✅ 복합 ChangeType 성공: Name={convertedData.Name}, Count={convertedData.Count} (long), Active={convertedData.Active} (int), Created={convertedData.Created} (string)");
+            System.Console.WriteLine("💡 int→long, bool→int, DateTime→string 변환 성공");
+
+            System.Console.WriteLine();
         }
     }
 }

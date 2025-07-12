@@ -11,10 +11,10 @@
     
     <!-- Package Information -->
     <PackageId>Structura</PackageId>
-    <PackageVersion>0.9.1-beta</PackageVersion>
-    <Title>Structura - Source Generator-Based Type Manipulation Library</Title>
-    <Description>A .NET library that automatically generates new types through source generators when you define type creation and manipulation rules using a fluent API. Supports type combination, anonymous types, EF Core projections, advanced property manipulation, and static converter methods directly on generated types for seamless object conversion.</Description>
-    <Summary>Source generator-based fluent API type manipulation library with static converter methods on generated types for .NET</Summary>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Title>Structura - Fluent API Source Generator Type Manipulation Library</Title>
+    <Description>A powerful .NET library that converts anonymous types and EF Core projections to strongly-typed types using source generators. Features include property addition/exclusion/type conversion, smart converters, and support for Records, Classes, and Structs with comprehensive testing coverage.</Description>
+    <Summary>Fluent API-based source generator for anonymous type manipulation with smart converters for .NET</Summary>
     <Authors>dimohy</Authors>
     <Company>dimohy</Company>
     <Product>Structura</Product>
@@ -24,53 +24,61 @@
     <PackageProjectUrl>https://github.com/dimohy/structura</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dimohy/structura</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>source-generator;fluent-api;type-manipulation;code-generation;csharp;dotnet;types;ef-core;projection;converter;extension-methods</PackageTags>
+    <PackageTags>source-generator;fluent-api;anonymous-types;ef-core-projection;type-manipulation;code-generation;csharp;dotnet;converter;record;class;struct</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>logo_nuget.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>
-      Version 0.9.1-beta Release Notes:
+      Version 1.0.0 Release Notes:
       
-      🔧 Fixed Issues:
-      - Fixed NuGet package structure to include both runtime library and source generator
-      - TypeCombiner class is now accessible from NuGet packages
-      - Resolved packaging configuration issues
+      🎉 Stable Release - Production Ready:
+      - Focused on proven, reliable functionality
+      - Comprehensive test coverage (150+ tests)
+      - Enhanced stability and predictability
       
-      🚀 Features:
-      - Complete anonymous type support with variable reference analysis
-      - EF Core projection result type generation
-      - Advanced property manipulation (Add, Exclude, ChangeType)
-      - Support for Records, Classes, and Structs generation
-      - 🆕 Smart Converter Extensions: Revolutionary .WithConverter() method for seamless object conversion
-      - Comprehensive fluent API with method chaining
+      🚀 Core Features:
+      - Anonymous type combination with .With()
+      - EF Core projection support with .WithProjection()
+      - Property manipulation: Add(), Exclude(), ChangeType()
+      - Smart converter methods with .WithConverter()
+      - Multiple type generation: Records, Classes, Structs
       
-      🔧 Improvements:
-      - Enhanced source generator performance
-      - Better type inference and analysis
-      - Improved error handling and validation
-      - 100+ comprehensive unit tests including converter functionality
+      ✨ Smart Converter Features:
+      - FromCollection() for anonymous object collections
+      - FromTypedCollection() for strongly-typed collections
+      - FromSingle() for individual anonymous objects
+      - FromTyped() for individual strongly-typed objects
+      - Automatic type conversion and null handling
       
-      🎯 Beta Features:
-      - Variable reference analysis for anonymous types
-      - EF Core projection support with smart conversion
-      - Complex type combination scenarios
-      - Intelligent type mapping and conversion
+      🔧 Property Manipulation:
+      - Add new properties with custom types
+      - Exclude sensitive or unwanted properties
+      - Change property types (e.g., decimal to string)
+      - Namespace customization support
       
-      🌟 Smart Converter Highlights:
-      - Direct static methods on generated types: UserDto.FromCollection()
-      - Strongly-typed anonymous object conversion: UserDto.FromTypedCollection()
-      - Individual object conversion: UserDto.FromTyped(), UserDto.FromSingle()
-      - Named type converters: CombinedType.FromSourceType(), CombinedType.FromBoth()
-      - Intelligent type mapping with null safety
-      - Support for primitives, collections, and complex types
-      - Case-insensitive property matching
-      - Compile-time type safety with full IntelliSense
+      🧪 Testing &amp; Quality:
+      - 150+ comprehensive unit tests
+      - Property generation verification
+      - Converter functionality validation
+      - Integration tests for complex scenarios
+      - Real-world usage pattern testing
       
-      📋 Known Issues:
-      - Some advanced property manipulation scenarios may be limited
-      - Existing type property inheritance is at 95% completion
+      📋 API Examples:
+      TypeCombiner.Combine()
+        .WithProjection(efCoreResult)
+        .Add("ProcessedAt", typeof(DateTime))
+        .Exclude("Password")
+        .ChangeType("Amount", typeof(string))
+        .WithName("OrderDto")
+        .WithConverter()
+        .AsRecord()
+        .Generate();
       
-      For full documentation and examples, visit: https://github.com/dimohy/structura
+      // Usage:
+      List&lt;Generated.OrderDto&gt; orders = OrderDto.FromCollection(efCoreResult);
+      
+      For documentation and examples, visit: https://github.com/dimohy/structura
     </PackageReleaseNotes>
     
     <!-- Package Configuration -->
@@ -88,6 +96,7 @@
   <ItemGroup>
     <None Include="..\README.md" Pack="true" PackagePath="\" />
     <None Include="..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\logo_nuget.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- Dependencies -->

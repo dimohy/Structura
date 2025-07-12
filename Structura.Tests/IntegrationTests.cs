@@ -1,443 +1,290 @@
-using Structura.Tests.TestModels;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using Xunit;
+using Structura;
 
 namespace Structura.Tests
 {
     /// <summary>
-    /// Source generator integration tests - Test actual generated types
+    /// Integration tests for complete functionality scenarios
     /// </summary>
-    public class SourceGeneratorIntegrationTests
+    public class IntegrationTests
     {
         [Fact]
-        public void SourceGenerator_Should_GenerateContactType()
+        public void CompleteScenario_AnonymousTypeWithAddAndConverter_Should_Work()
         {
-            // Arrange
+            // Arrange - Simulate a real-world scenario
+            var userData = new { FirstName = "John", LastName = "Doe", Email = "john@test.com" };
+
             TypeCombiner.Combine()
-                .With(new { Name = "", Age = 0, Sex = "Male" })
-                .With(new { Email = "", Phone = "" })
-                .WithName("Contact")
-                .AsRecord()
-                .Generate();
-
-            // Act & Assert
-            var contactType = Type.GetType("Generated.Contact");
-            if (contactType != null)
-            {
-                Assert.True(contactType.IsClass);
-                var properties = contactType.GetProperties();
-                Assert.True(properties.Length >= 3); // Name, Age, Sex, Email, Phone etc.
-            }
-            // Source generator may not be active during testing, so null is acceptable
-        }
-
-        [Fact]
-        public void SourceGenerator_Should_GenerateExtendedUserType()
-        {
-            // Arrange
-            TypeCombiner.From<User>()
+                .With(userData)
+                .Add("UserId", typeof(Guid))
                 .Add("CreatedAt", typeof(DateTime))
-                .Add("LastLoginAt", typeof(DateTime?))
-                .Add("Metadata", typeof(Dictionary<string, object>))
-                .WithName("ExtendedUser")
+                .Add("IsActive", typeof(bool))
+                .WithName("CompleteUserProfile")
+                .WithConverter()
                 .AsClass()
                 .Generate();
 
-            // Act & Assert
-            var extendedUserType = Type.GetType("Generated.ExtendedUser");
-            if (extendedUserType != null)
-            {
-                Assert.True(extendedUserType.IsClass);
-                var properties = extendedUserType.GetProperties();
-                
-                // Check for added properties
-                var createdAtProp = properties.FirstOrDefault(p => p.Name == "CreatedAt");
-                var lastLoginProp = properties.FirstOrDefault(p => p.Name == "LastLoginAt");
-                var metadataProp = properties.FirstOrDefault(p => p.Name == "Metadata");
+            // Act
+            var generatedType = Type.GetType("Generated.CompleteUserProfile, Structura.Tests");
 
-                Assert.NotNull(createdAtProp);
-                Assert.NotNull(lastLoginProp);
-                Assert.NotNull(metadataProp);
-            }
+            // Assert Type Generation
+            Assert.NotNull(generatedType);
+            Assert.True(generatedType.IsClass);
+
+            // Assert Properties from Anonymous Type
+            var firstNameProperty = generatedType.GetProperty("FirstName");
+            var lastNameProperty = generatedType.GetProperty("LastName");
+            var emailProperty = generatedType.GetProperty("Email");
+
+            Assert.NotNull(firstNameProperty);
+            Assert.NotNull(lastNameProperty);
+            Assert.NotNull(emailProperty);
+
+            // Assert Properties from Add
+            var userIdProperty = generatedType.GetProperty("UserId");
+            var createdAtProperty = generatedType.GetProperty("CreatedAt");
+            var isActiveProperty = generatedType.GetProperty("IsActive");
+
+            Assert.NotNull(userIdProperty);
+            Assert.NotNull(createdAtProperty);
+            Assert.NotNull(isActiveProperty);
+
+            // Assert Converter Methods
+            var fromSingleMethod = generatedType.GetMethod("FromSingle", BindingFlags.Public | BindingFlags.Static);
+            var fromCollectionMethod = generatedType.GetMethod("FromCollection", BindingFlags.Public | BindingFlags.Static);
+
+            Assert.NotNull(fromSingleMethod);
+            Assert.NotNull(fromCollectionMethod);
+
+            // Test actual conversion
+            var testUser = new { FirstName = "Jane", LastName = "Smith", Email = "jane@test.com" };
+            var convertedUser = fromSingleMethod.Invoke(null, new object[] { testUser });
+
+            Assert.NotNull(convertedUser);
+            Assert.Equal("Jane", firstNameProperty.GetValue(convertedUser));
+            Assert.Equal("Smith", lastNameProperty.GetValue(convertedUser));
+            Assert.Equal("jane@test.com", emailProperty.GetValue(convertedUser));
         }
 
         [Fact]
-        public void SourceGenerator_Should_GenerateUserProfileType()
+        public void CompleteScenario_ProjectionWithAddAndConverterAsRecord_Should_Work()
         {
-            // Arrange
-            TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-                .WithName("UserProfile")
+            // Arrange - EF Core-like projection scenario
+            var efProjection = new[]
+            {
+                new { OrderId = 1, CustomerName = "Alice", Total = 250.50m },
+                new { OrderId = 2, CustomerName = "Bob", Total = 150.25m }
+            };
+
+            TypeCombiner.Combine()
+                .WithProjection(efProjection)
+                .Add("ProcessedAt", typeof(DateTime))
+                .Add("Status", typeof(string))
+                .WithName("EnhancedOrder")
+                .WithConverter()
                 .AsRecord()
                 .Generate();
 
-            // Act & Assert
-            var userProfileType = Type.GetType("Generated.UserProfile");
-            if (userProfileType != null)
-            {
-                Assert.True(userProfileType.IsClass);
-                var properties = userProfileType.GetProperties();
-                Assert.True(properties.Length >= 0); // Properties from combined types
-            }
+            // Act
+            var generatedType = Type.GetType("Generated.EnhancedOrder, Structura.Tests");
+
+            // Assert
+            Assert.NotNull(generatedType);
+
+            // Check all properties exist
+            var orderIdProperty = generatedType.GetProperty("OrderId");
+            var customerNameProperty = generatedType.GetProperty("CustomerName");
+            var totalProperty = generatedType.GetProperty("Total");
+            var processedAtProperty = generatedType.GetProperty("ProcessedAt");
+            var statusProperty = generatedType.GetProperty("Status");
+
+            Assert.NotNull(orderIdProperty);
+            Assert.NotNull(customerNameProperty);
+            Assert.NotNull(totalProperty);
+            Assert.NotNull(processedAtProperty);
+            Assert.NotNull(statusProperty);
+
+            // Check record constructor
+            var constructors = generatedType.GetConstructors();
+            var primaryConstructor = Array.Find(constructors, c => c.GetParameters().Length == 5);
+            Assert.NotNull(primaryConstructor);
+
+            // Check converter methods
+            var fromCollectionMethod = generatedType.GetMethod("FromCollection", BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(fromCollectionMethod);
+
+            // Test actual conversion - use the generated method directly without MakeGenericMethod
+            // The generated FromCollection method takes IEnumerable<object>, so cast the array
+            var result = fromCollectionMethod.Invoke(null, new object[] { efProjection.Cast<object>() });
+
+            Assert.NotNull(result);
+            var resultList = (System.Collections.IList)result;
+            Assert.Equal(2, resultList.Count);
+
+            // Verify the converted objects have the correct property values
+            var firstOrder = resultList[0];
+            var secondOrder = resultList[1];
+
+            Assert.Equal(1, orderIdProperty.GetValue(firstOrder));
+            Assert.Equal("Alice", customerNameProperty.GetValue(firstOrder));
+            Assert.Equal(250.50m, totalProperty.GetValue(firstOrder));
+
+            Assert.Equal(2, orderIdProperty.GetValue(secondOrder));
+            Assert.Equal("Bob", customerNameProperty.GetValue(secondOrder));
+            Assert.Equal(150.25m, totalProperty.GetValue(secondOrder));
         }
 
         [Fact]
-        public void SourceGenerator_Should_HandleExcludedProperties()
+        public void CompleteScenario_MultipleAnonymousTypesWithAdd_Should_Work()
         {
-            // Arrange
-            TypeCombiner.From<PersonalInfo>()
-                .Exclude(p => p.Password)
-                .WithName("PublicPersonalInfo")
-                .AsRecord()
+            // Arrange - Multiple data sources scenario
+            var personalInfo = new { FirstName = "John", LastName = "Doe", Age = 30 };
+            var contactInfo = new { Email = "john@example.com", Phone = "123-456-7890" };
+            var workInfo = new { Company = "Tech Corp", Position = "Developer" };
+
+            TypeCombiner.Combine()
+                .With(personalInfo)
+                .With(contactInfo)
+                .With(workInfo)
+                .Add("EmployeeId", typeof(int))
+                .Add("HireDate", typeof(DateTime))
+                .Add("Salary", typeof(decimal))
+                .WithName("CompleteEmployee")
+                .WithConverter()
+                .AsClass()
                 .Generate();
 
-            // Act & Assert
-            var publicPersonalInfoType = Type.GetType("Generated.PublicPersonalInfo");
-            if (publicPersonalInfoType != null)
-            {
-                var properties = publicPersonalInfoType.GetProperties();
-                var passwordProp = properties.FirstOrDefault(p => p.Name == "Password");
-                
-                // Check that Password property is excluded
-                Assert.Null(passwordProp);
-            }
+            // Act
+            var generatedType = Type.GetType("Generated.CompleteEmployee, Structura.Tests");
+
+            // Assert
+            Assert.NotNull(generatedType);
+
+            // Properties from first anonymous type
+            Assert.NotNull(generatedType.GetProperty("FirstName"));
+            Assert.NotNull(generatedType.GetProperty("LastName"));
+            Assert.NotNull(generatedType.GetProperty("Age"));
+
+            // Properties from second anonymous type
+            Assert.NotNull(generatedType.GetProperty("Email"));
+            Assert.NotNull(generatedType.GetProperty("Phone"));
+
+            // Properties from third anonymous type
+            Assert.NotNull(generatedType.GetProperty("Company"));
+            Assert.NotNull(generatedType.GetProperty("Position"));
+
+            // Properties from Add operations
+            Assert.NotNull(generatedType.GetProperty("EmployeeId"));
+            Assert.NotNull(generatedType.GetProperty("HireDate"));
+            Assert.NotNull(generatedType.GetProperty("Salary"));
+
+            // Test instance creation and property access
+            var instance = Activator.CreateInstance(generatedType);
+            Assert.NotNull(instance);
+
+            var firstNameProperty = generatedType.GetProperty("FirstName");
+            var employeeIdProperty = generatedType.GetProperty("EmployeeId");
+
+            firstNameProperty.SetValue(instance, "Test Name");
+            employeeIdProperty.SetValue(instance, 12345);
+
+            Assert.Equal("Test Name", firstNameProperty.GetValue(instance));
+            Assert.Equal(12345, employeeIdProperty.GetValue(instance));
         }
 
         [Fact]
-        public void SourceGenerator_Should_HandleTypeChanges()
+        public void CompleteScenario_StructWithComplexTypes_Should_Work()
         {
-            // Arrange
-            TypeCombiner.From<Product>()
-                .ChangeType(p => p.Price, typeof(string))
-                .ChangeType(p => p.StockQuantity, typeof(string))
-                .WithName("ProductDto")
-                .AsRecord()
-                .Generate();
+            // Arrange - Complex data types scenario
+            var complexData = new 
+            { 
+                Id = Guid.NewGuid(),
+                Tags = new[] { "tag1", "tag2" },
+                Metadata = new Dictionary<string, object> { ["key"] = "value" },
+                NullableDate = DateTime.Now as DateTime?
+            };
 
-            // Act & Assert
-            var productDtoType = Type.GetType("Generated.ProductDto");
-            if (productDtoType != null)
-            {
-                var properties = productDtoType.GetProperties();
-                var priceProp = properties.FirstOrDefault(p => p.Name == "Price");
-                var stockProp = properties.FirstOrDefault(p => p.Name == "StockQuantity");
-
-                // Check that types are changed correctly
-                if (priceProp != null)
-                    Assert.Equal(typeof(string), priceProp.PropertyType);
-                if (stockProp != null)
-                    Assert.Equal(typeof(string), stockProp.PropertyType);
-            }
-        }
-
-        [Fact]
-        public void SourceGenerator_Should_CreateStructType()
-        {
-            // Arrange
-            TypeCombiner.From<Product>()
-                .Add("LastRestocked", typeof(DateTime?))
-                .Add("MinimumStock", typeof(int))
-                .Add("Supplier", typeof(string))
-                .WithName("ProductWithInventory")
+            TypeCombiner.Combine()
+                .With(complexData)
+                .Add("ProcessingTime", typeof(TimeSpan))
+                .Add("Flags", typeof(int[]))
+                .WithName("ComplexDataStruct")
                 .AsStruct()
                 .Generate();
 
-            // Act & Assert
-            var productWithInventoryType = Type.GetType("Generated.ProductWithInventory");
-            if (productWithInventoryType != null)
-            {
-                Assert.True(productWithInventoryType.IsValueType);
-                Assert.False(productWithInventoryType.IsEnum);
-            }
-        }
-    }
+            // Act
+            var generatedType = Type.GetType("Generated.ComplexDataStruct, Structura.Tests");
 
-    /// <summary>
-    /// Performance tests
-    /// </summary>
-    public class PerformanceTests
-    {
+            // Assert
+            Assert.NotNull(generatedType);
+            Assert.True(generatedType.IsValueType);
+
+            // Check complex type properties
+            var idProperty = generatedType.GetProperty("Id");
+            var tagsProperty = generatedType.GetProperty("Tags");
+            var metadataProperty = generatedType.GetProperty("Metadata");
+            var nullableDateProperty = generatedType.GetProperty("NullableDate");
+            var processingTimeProperty = generatedType.GetProperty("ProcessingTime");
+            var flagsProperty = generatedType.GetProperty("Flags");
+
+            Assert.NotNull(idProperty);
+            Assert.NotNull(tagsProperty);
+            Assert.NotNull(metadataProperty);
+            Assert.NotNull(nullableDateProperty);
+            Assert.NotNull(processingTimeProperty);
+            Assert.NotNull(flagsProperty);
+
+            Assert.Equal(typeof(Guid), idProperty.PropertyType);
+            Assert.Equal(typeof(string[]), tagsProperty.PropertyType);
+            Assert.Equal(typeof(Dictionary<string, object>), metadataProperty.PropertyType);
+            Assert.Equal(typeof(DateTime?), nullableDateProperty.PropertyType);
+            Assert.Equal(typeof(TimeSpan), processingTimeProperty.PropertyType);
+            Assert.Equal(typeof(int[]), flagsProperty.PropertyType);
+        }
+
         [Fact]
-        public void TypeCombiner_MultipleGenerations_Should_BeReasonablyFast()
+        public void PerformanceScenario_LargeNumberOfProperties_Should_Work()
         {
-            // Arrange
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            const int iterations = 100;
+            // Arrange - Stress test with many properties
+            var largeAnonymous = new 
+            { 
+                Prop01 = "Value01", Prop02 = "Value02", Prop03 = "Value03", Prop04 = "Value04", Prop05 = "Value05",
+                Prop06 = "Value06", Prop07 = "Value07", Prop08 = "Value08", Prop09 = "Value09", Prop10 = "Value10",
+                Prop11 = 11, Prop12 = 12, Prop13 = 13, Prop14 = 14, Prop15 = 15,
+                Prop16 = true, Prop17 = false, Prop18 = true, Prop19 = false, Prop20 = true
+            };
+
+            TypeCombiner.Combine()
+                .With(largeAnonymous)
+                .Add("AddedProp01", typeof(DateTime))
+                .Add("AddedProp02", typeof(Guid))
+                .Add("AddedProp03", typeof(decimal))
+                .Add("AddedProp04", typeof(double))
+                .Add("AddedProp05", typeof(float))
+                .WithName("LargePropertyTest")
+                .AsClass()
+                .Generate();
 
             // Act
-            for (int i = 0; i < iterations; i++)
-            {
-                TypeCombiner.From<SimpleModel>()
-                    .Add($"Property{i}", typeof(string))
-                    .WithName($"TestType{i}")
-                    .Generate();
-            }
+            var generatedType = Type.GetType("Generated.LargePropertyTest, Structura.Tests");
 
-            stopwatch.Stop();
+            // Assert
+            Assert.NotNull(generatedType);
 
-            // Assert - Should complete 100 generations within 5 seconds
-            Assert.True(stopwatch.ElapsedMilliseconds < 5000, 
-                $"Performance test failed: {stopwatch.ElapsedMilliseconds}ms for {iterations} iterations");
-        }
+            // Check that all properties were generated
+            var properties = generatedType.GetProperties();
+            Assert.True(properties.Length >= 25); // 20 from anonymous + 5 from Add
 
-        [Fact]
-        public void TypeCombiner_ComplexChain_Should_NotCauseStackOverflow()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                var builder = TypeCombiner.From<User>();
-                
-                // Very long chain creation
-                for (int i = 0; i < 50; i++)
-                {
-                    builder = builder.Add($"Property{i}", typeof(string));
-                }
-                
-                builder.WithName("VeryComplexType").Generate();
-            });
-
-            Assert.Null(exception);
-        }
-    }
-
-    /// <summary>
-    /// Real world scenario tests
-    /// </summary>
-    public class RealWorldScenarioTests
-    {
-        [Fact]
-        public void Scenario_APIDto_Should_Work()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                // Scenario from README.md examples
-                TypeCombiner.From<PersonalInfo>()
-                    .Exclude(u => u.Password)
-                    .Add("PublicId", typeof(Guid))
-                    .WithName("UserApiDto")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void Scenario_DatabaseMigration_Should_Work()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                // Scenario from README.md examples
-                TypeCombiner.From<User>()
-                    .Add("CreatedAt", typeof(DateTime))
-                    .Add("UpdatedAt", typeof(DateTime?))
-                    .ChangeType(u => u.IsActive, typeof(int)) // bool -> int conversion
-                    .WithName("ModernUserTable")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void Scenario_EmployeeFromUser_Should_Work()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                // Scenario from Program.cs examples
-                TypeCombiner.Combine<User>()
-                    .With(new { Department = "", Salary = 0m, Position = "" })
-                    .WithName("Employee")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void Scenario_SecureUserProfile_Should_Work()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                // Complex scenario from Program.cs examples
-                TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-                    .Exclude<PersonalInfo>(p => p.Password)
-                    .Exclude<PersonalInfo>(p => p.BirthDate)
-                    .Add("CreatedAt", typeof(DateTime))
-                    .Add("IsVerified", typeof(bool))
-                    .ChangeType<ContactInfo>(c => c.PhoneNumber, typeof(string))
-                    .WithName("SecureUserProfile")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void Scenario_UserAccount_Should_Work()
-        {
-            // Arrange & Act & Assert
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.Combine()
-                    .With(new { UserId = Guid.Empty, Username = "" })
-                    .With(new { CreatedAt = DateTime.Now, IsActive = true })
-                    .With(new { Permissions = new string[] { }, Role = "" })
-                    .WithName("UserAccount")
-                    .AsClass()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-    }
-
-    /// <summary>
-    /// Documented features tests (README.md examples)
-    /// </summary>
-    public class DocumentedFeaturesTests
-    {
-        [Fact]
-        public void DocumentedFeature_TypeCombination_Should_Work()
-        {
-            // First example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-                    .WithName("UserProfile")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_AnonymousTypesSupport_Should_Work()
-        {
-            // Anonymous types support from README.md
-            var exception1 = Record.Exception(() =>
-            {
-                TypeCombiner.Combine<User>()
-                    .With(new { Department = "", Salary = 0m, IsActive = true })
-                    .WithName("Employee")
-                    .Generate();
-            });
-
-            var exception2 = Record.Exception(() =>
-            {
-                TypeCombiner.Combine()
-                    .With(new { Name = "", Age = 0 })
-                    .With(new { Email = "", Phone = "" })
-                    .WithName("Contact")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception1);
-            Assert.Null(exception2);
-        }
-
-        [Fact]
-        public void DocumentedFeature_PropertyExclusion_Should_Work()
-        {
-            // Property exclusion example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.From<PersonalInfo>()
-                    .Exclude(u => u.Password)
-                    .WithName("PublicUser")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_PropertyAddition_Should_Work()
-        {
-            // Property addition example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.From<User>()
-                    .Add("CreatedAt", typeof(DateTime))
-                    .Add("IsActive", typeof(bool))
-                    .Add("Metadata", typeof(Dictionary<string, object>))
-                    .WithName("ExtendedUser")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_TypeChange_Should_Work()
-        {
-            // Type change example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.From<Product>()
-                    .ChangeType(e => e.Price, typeof(string))      // decimal to string
-                    .ChangeType(e => e.StockQuantity, typeof(string)) // int to string
-                    .WithName("EmployeeDto")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_ComplexOperation_Should_Work()
-        {
-            // Complex operation example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-                    .Exclude<PersonalInfo>(p => p.Password)                       // Exclude sensitive property
-                    .Add("LastLoginAt", typeof(DateTime?))          // Add new property
-                    .ChangeType<ContactInfo>(c => c.PhoneNumber, typeof(string)) // Change type
-                    .WithName("SecureUserProfile")
-                    .AsRecord()
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_CollectionTypes_Should_Work()
-        {
-            // Collection types example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.From<User>()
-                    .Add("Tags", typeof(List<string>))
-                    .Add("Permissions", typeof(string[]))
-                    .WithName("TaggedUser")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
-        }
-
-        [Fact]
-        public void DocumentedFeature_ConditionalExclusion_Should_Work()
-        {
-            // Conditional property exclusion example from README.md
-            var exception = Record.Exception(() =>
-            {
-                TypeCombiner.From<PersonalInfo>()
-                    .ExcludeIf(u => u.Password, condition: true)
-                    .WithName("ContextualUser")
-                    .Generate();
-            });
-
-            Assert.Null(exception);
+            // Spot check some properties
+            Assert.NotNull(generatedType.GetProperty("Prop01"));
+            Assert.NotNull(generatedType.GetProperty("Prop10"));
+            Assert.NotNull(generatedType.GetProperty("Prop20"));
+            Assert.NotNull(generatedType.GetProperty("AddedProp01"));
+            Assert.NotNull(generatedType.GetProperty("AddedProp05"));
         }
     }
 }

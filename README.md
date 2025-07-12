@@ -1,20 +1,21 @@
-﻿<img src="./logo.png" width="256" height="256">
+﻿# Structura
 
-# Structura
+<img src="./logo.png" width="256" height="256">
 
-**Source Generator-Based Fluent API Type Manipulation Library**
+**Fluent API-based Source Generator Type Manipulation Library**
 
-Structura is a .NET library that automatically generates new types through source generators when you define type creation and manipulation rules using a fluent API.
+Structura is a flexible type generation library that converts anonymous types and EF Core projection results to strongly-typed types, with the ability to add, exclude, and change properties.
 
 ## 🚀 Key Features
 
-- **🔄 Type Combination**: Combine existing types to create new types
-- **🎭 Anonymous Type Support**: Complete anonymous type analysis including variable references
-- **🔗 EF Core Projection Support**: Convert EF Core projection results to strongly-typed types
-- **⚙️ Advanced Property Manipulation**: Add, exclude, and change property types
-- **🏷️ Diverse Type Generation**: Support for Records, Classes, and Structs
-- **🎯 Smart Converter Extensions**: Generate extension methods for seamless object conversion (NEW!)
-- **🧪 Comprehensive Testing**: 100+ comprehensive unit tests
+- **🎭 Anonymous Type Combination**: Combine multiple anonymous types to create new types
+- **🔗 EF Core Projection Support**: Automatically convert EF Core Select results to strongly-typed types
+- **➕ Property Addition**: Add new properties to existing types (`.Add()`)
+- **➖ Property Exclusion**: Exclude sensitive or unnecessary properties (`.Exclude()`)
+- **🔄 Type Conversion**: Change existing property types to different types (`.ChangeType()`)
+- **🎯 Smart Converter**: Automatically generate extension methods for converting anonymous objects to strong types
+- **🏷️ Multiple Type Generation**: Support for Records, Classes, and Structs
+- **🧪 Comprehensive Testing**: Stability verified with 100+ unit tests
 
 ## 📦 Installation
 
@@ -23,119 +24,64 @@ dotnet add package Structura
 ```
 ## 🏗️ Core Features
 
-### 1. Type Combination
+### 1. Anonymous Type Combination
 
-Combine existing types to create new types.
-
-```csharp
-// Combine two existing types
-TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-    .WithName("UserProfile")
-    .AsRecord()
-    .Generate();
-
-// Result: Creates a UserProfile record with all properties from PersonalInfo and ContactInfo
-```
-### 2. Anonymous Type Support
-
-Complete support for anonymous types and variable references.
+Combine multiple anonymous types to create new strongly-typed types.
 
 ```csharp
-// Direct anonymous type creation
-TypeCombiner.Combine()
-    .With(new { Name = "", Age = 0 })
-    .With(new { Email = "", Phone = "" })
-    .WithName("Contact")
-    .AsRecord()
-    .Generate();
+// Single anonymous type usage
+var userInfo = new { Name = "John Doe", Age = 30, Department = "Development" };
 
-// Variable reference approach (validated in actual tests)
-var userInfo = new { Name = "John Doe", Age = 40, Sex = "male" };
 TypeCombiner.Combine()
     .With(userInfo)
-    .WithName("AnonymousUser")
-    .AsClass()
-    .Generate();
-
-// Combine existing type with anonymous type
-TypeCombiner.Combine<User>()
-    .With(new { Department = "", Salary = 0m, Position = "" })
     .WithName("Employee")
     .AsRecord()
     .Generate();
-```
-### 3. EF Core Projection Support
 
-Convert EF Core projection results to strongly-typed types.
+// Usage: new Generated.Employee("Jane Smith", 25, "Design")
+
+// Multiple anonymous type combination
+var personal = new { FirstName = "John", LastName = "Doe" };
+var work = new { Company = "TechCorp", Position = "Developer" };
+
+TypeCombiner.Combine()
+    .With(personal)
+    .With(work)
+    .WithName("FullProfile")
+    .AsClass()
+    .Generate();
+```
+### 2. EF Core Projection Support
+
+Automatically convert EF Core Select results to strongly-typed types.
 
 ```csharp
-// EF Core projection simulation
-var userProjection = new List<object>
-{
-    new { Name = "John Doe", Email = "john@example.com" },
-    new { Name = "Jane Smith", Email = "jane@example.com" }
-};
+// EF Core projection query
+var userProjection = dbContext.Users
+    .Select(u => new { u.Name, u.Email, u.Department })
+    .ToList();
 
+// Strong type generation
 TypeCombiner.Combine()
     .WithProjection(userProjection)
-    .WithName("UserProjectionType")
+    .WithName("UserDto")
+    .WithConverter()  // 🔥 Enable smart conversion
     .AsRecord()
     .Generate();
 
-// Dashboard data generation
-var dashboardData = new List<object>
-{
-    new { 
-        CustomerName = "John Doe", 
-        TotalOrders = 12, 
-        TotalSpent = 150000m,
-        LastOrderDate = DateTime.Now.AddDays(-5)
-    }
-};
-
-TypeCombiner.Combine()
-    .WithProjection(dashboardData)
-    .With(new { GeneratedAt = DateTime.Now, ReportType = "CustomerAnalysis" })
-    .WithName("CustomerDashboard")
-    .AsRecord()
-    .Generate();
+// Automatic conversion usage
+List<Generated.UserDto> typedUsers = UserDto.FromCollection(userProjection);
+Generated.UserDto singleUser = UserDto.FromSingle(userProjection.First());
 ```
-### 4. 🎯 Smart Converter Extensions (NEW!)
+### 3. 🎯 Smart Converter (Core Feature!)
 
-**The game-changer for EF Core projections!** Enable automatic conversion from anonymous objects to strongly-typed instances.
-
-#### Basic Usage
+**The game-changer for EF Core projections!** Generates static methods for automatically converting anonymous objects to strongly-typed types.
 
 ```csharp
 // Step 1: Generate type with converter enabled
-var efResult = dbContext.Users.Select(x => new { x.Name, x.Email }).ToList();
-
-TypeCombiner.Combine()
-    .WithProjection(efResult)
-    .WithName("UserDto")
-    .WithConverter()  // 🔥 This enables the magic!
-    .AsRecord()
-    .Generate();
-
-// Step 2: Use the generated static converter methods directly on the type
-List<Generated.UserDto> typedUsers = UserDto.FromCollection(efResult);
-Generated.UserDto singleUser = UserDto.FromSingle(efResult.First());
-
-// 🆕 NEW! Strongly-typed anonymous object conversion
-var anonymousUsers = new[] {
-    new { Name = "John", Email = "john@test.com" },
-    new { Name = "Jane", Email = "jane@test.com" }
-};
-List<Generated.UserDto> convertedUsers = UserDto.FromTypedCollection(anonymousUsers);
-Generated.UserDto convertedSingle = UserDto.FromTyped(anonymousUsers.First());
-```
-#### Advanced Converter Scenarios
-
-```csharp
-// Complex EF Core projection with additional properties
-var dashboardProjection = dbContext.Orders
+var customerData = dbContext.Orders
     .GroupBy(o => o.CustomerId)
-    .Select(g => new { 
+    .Select(g => new {
         CustomerId = g.Key,
         CustomerName = g.First().Customer.Name,
         TotalOrders = g.Count(),
@@ -144,94 +90,130 @@ var dashboardProjection = dbContext.Orders
     .ToList();
 
 TypeCombiner.Combine()
-    .WithProjection(dashboardProjection)
-    .With(new { 
-        ReportDate = DateTime.Now,
-        ReportType = "Customer Analytics",
-        GeneratedBy = "System"
-    })
+    .WithProjection(customerData)
     .WithName("CustomerAnalytics")
-    .WithConverter()  // 🔥 Enable smart conversion
+    .WithConverter()  // 🔥 The magic begins!
     .AsRecord()
     .Generate();
 
-// Now seamlessly convert your projection results
-List<Generated.CustomerAnalytics> analytics = CustomerAnalytics.FromCollection(dashboardProjection);
+// Step 2: Use conversion methods directly on the generated type
+List<Generated.CustomerAnalytics> analytics = CustomerAnalytics.FromCollection(customerData);
+Generated.CustomerAnalytics single = CustomerAnalytics.FromSingle(customerData.First());
 
-// Or convert individual items
-Generated.CustomerAnalytics single = CustomerAnalytics.FromSingle(dashboardProjection.First());
-
-// Convert from named types (if combining PersonalInfo + ContactInfo)
-Generated.UserProfile profile1 = UserProfile.FromPersonalInfo(personalInfo);
-Generated.UserProfile profile2 = UserProfile.FromContactInfo(contactInfo);
-Generated.UserProfile profile3 = UserProfile.FromBoth(personalInfo, contactInfo);
-```### 5. Advanced Property Manipulation
-
-#### Property Exclusion
-
-```csharp
-TypeCombiner.From<PersonalInfo>()
-    .Exclude(p => p.Password)
-    .Exclude(p => p.BirthDate)
-    .WithName("PublicPersonalInfo")
-    .Generate();
+// Strongly-typed anonymous objects are also convertible
+var anonymousData = new[] {
+    new { CustomerId = 1, CustomerName = "John Doe", TotalOrders = 5, TotalSpent = 150000m },
+    new { CustomerId = 2, CustomerName = "Jane Smith", TotalOrders = 3, TotalSpent = 75000m }
+};
+List<Generated.CustomerAnalytics> converted = CustomerAnalytics.FromTypedCollection(anonymousData);
 ```
+### 4. Property Manipulation Features
 
 #### Property Addition
 
 ```csharp
-TypeCombiner.From<User>()
+// Add new properties to existing types
+var userData = new { Name = "John Doe", Email = "john@test.com" };
+
+TypeCombiner.Combine()
+    .With(userData)
+    .Add("Id", typeof(int))
     .Add("CreatedAt", typeof(DateTime))
-    .Add("LastLoginAt", typeof(DateTime?))
     .Add("Metadata", typeof(Dictionary<string, object>))
-    .WithName("ExtendedUser")
+    .WithName("EnhancedUser")
+    .AsClass()
+    .Generate();
+
+// Pure Add usage for type creation
+TypeCombiner.Combine()
+    .Add("Name", typeof(string))
+    .Add("Value", typeof(int))
+    .Add("IsActive", typeof(bool))
+    .WithName("CustomType")
+    .AsRecord()
+    .Generate();
+```
+#### Property Exclusion
+
+```csharp
+// Exclude sensitive information
+var sensitiveData = new { 
+    Name = "John Doe", 
+    Age = 30, 
+    Password = "secret123", 
+    Email = "john@test.com" 
+};
+
+TypeCombiner.Combine()
+    .With(sensitiveData)
+    .Exclude("Password")  // Exclude password
+    .WithName("SafeUser")
+    .AsClass()
+    .Generate();
+
+// Multiple property exclusion
+TypeCombiner.Combine()
+    .With(userData)
+    .Exclude("Password")
+    .Exclude("InternalId")
+    .WithName("PublicData")
+    .Generate();
+```
+#### Type Conversion
+
+```csharp
+// Property type conversion
+var numericData = new { 
+    Id = 1, 
+    Price = 100m, 
+    Quantity = 5, 
+    IsActive = true 
+};
+
+TypeCombiner.Combine()
+    .With(numericData)
+    .ChangeType("Price", typeof(string))    // decimal → string
+    .ChangeType("Quantity", typeof(long))   // int → long
+    .ChangeType("IsActive", typeof(int))    // bool → int
+    .WithName("ConvertedProduct")
     .AsClass()
     .Generate();
 ```
+### 5. Complex Operations
 
-#### Type Changes
-
-```csharp
-TypeCombiner.From<Product>()
-    .ChangeType(p => p.Price, typeof(string))      // decimal → string
-    .ChangeType(p => p.StockQuantity, typeof(string)) // int → string
-    .WithName("ProductDto")
-    .Generate();
-```
-
-#### Conditional Exclusion
+All features can be used together.
 
 ```csharp
-bool isAdmin = false;
-TypeCombiner.From<PersonalInfo>()
-    .ExcludeIf(p => p.Password, condition: !isAdmin)
-    .WithName("ContextualUser")
-    .Generate();
-```
-### 6. Complex Operations
+// EF Core projection + property addition + type conversion + converter
+var orderProjection = dbContext.Orders
+    .Select(o => new { 
+        o.Id, 
+        o.CustomerName, 
+        o.Amount, 
+        o.OrderDate 
+    })
+    .ToList();
 
-All features can be used together, including the new converter functionality.
-
-```csharp
-TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-    .Exclude<PersonalInfo>(p => p.Password)           // Exclude sensitive information
-    .Add("LastLoginAt", typeof(DateTime?))            // Add new property
-    .ChangeType<ContactInfo>(c => c.PhoneNumber, typeof(string)) // Change type
-    .WithConverter()                                  // Enable smart conversion
-    .WithName("SecureUserProfile")
+TypeCombiner.Combine()
+    .WithProjection(orderProjection)
+    .Add("ProcessedAt", typeof(DateTime))           // Property addition
+    .Add("Status", typeof(string))                  // Property addition
+    .ChangeType("Amount", typeof(string))           // decimal → string
+    .Exclude("InternalId")                          // Property exclusion (if exists)
+    .WithConverter()                                // Enable smart converter
+    .WithName("ProcessedOrder")
     .AsRecord()
     .Generate();
 
-// Now you can convert anonymous objects to SecureUserProfile
-var anonymousData = new { FirstName = "John", Email = "john@example.com", LastLoginAt = DateTime.Now };
-Generated.SecureUserProfile profile = SecureUserProfile.FromTyped(anonymousData);
+// Complete conversion support
+List<Generated.ProcessedOrder> orders = ProcessedOrder.FromCollection(orderProjection);
 ```
 ## 🏷️ Supported Type Generation
 
 | Type | Method | Description | Converter Support |
 |------|--------|-------------|-------------------|
-| **Record** | `.AsRecord()` | Generate immutable records | ✅ Full Support |
-| **Class** | `.AsClass()` | Generate mutable classes | ✅ Full Support |
+| **Record** | `.AsRecord()` | Generate immutable record types | ✅ Full Support |
+| **Class** | `.AsClass()` | Generate mutable class types | ✅ Full Support |
 | **Struct** | `.AsStruct()` | Generate value type structs | ✅ Full Support |
 
 ## 🎯 Target Frameworks
@@ -240,13 +222,13 @@ Generated.SecureUserProfile profile = SecureUserProfile.FromTyped(anonymousData)
 - **.NET 9** recommended
 - **C# 12.0** syntax support
 
-## 🚀 Advanced Usage
+## 🚀 Real-World Usage Scenarios
 
-### Real-World EF Core Integration
+### EF Core Integration
 
 ```csharp
-// 1. EF Core projection query
-var customerAnalytics = await dbContext.Orders
+// Complex dashboard data generation
+var dashboardData = await dbContext.Orders
     .Include(o => o.Customer)
     .GroupBy(o => new { o.CustomerId, o.Customer.Name })
     .Select(g => new {
@@ -255,165 +237,113 @@ var customerAnalytics = await dbContext.Orders
         TotalOrders = g.Count(),
         TotalRevenue = g.Sum(o => o.Amount),
         AverageOrderValue = g.Average(o => o.Amount),
-        FirstOrderDate = g.Min(o => o.OrderDate),
         LastOrderDate = g.Max(o => o.OrderDate)
     })
     .ToListAsync();
 
-// 2. Generate strongly-typed DTO with converter
+// Strongly-typed DTO generation and conversion
 TypeCombiner.Combine()
-    .WithProjection(customerAnalytics)
-    .With(new { 
-        AnalysisDate = DateTime.UtcNow,
-        AnalysisType = "Customer Revenue Analysis",
-        Currency = "USD"
-    })
-    .WithName("CustomerRevenueDto")
-    .WithConverter()  // 🔥 Enable seamless conversion
+    .WithProjection(dashboardData)
+    .Add("GeneratedAt", typeof(DateTime))
+    .Add("ReportType", typeof(string))
+    .WithName("CustomerDashboard")
+    .WithConverter()
     .AsRecord()
     .Generate();
 
-// 3. Convert to strongly-typed collection
-List<Generated.CustomerRevenueDto> typedAnalytics = CustomerRevenueDto.FromCollection(customerAnalytics);
+// Immediately available strongly-typed collection
+List<Generated.CustomerDashboard> dashboard = CustomerDashboard.FromCollection(dashboardData);
 
-// 4. Use with full IntelliSense and type safety
-var topCustomers = typedAnalytics
-    .Where(c => c.TotalRevenue > 10000)
+// Complete type safety in business logic
+var topCustomers = dashboard
+    .Where(c => c.TotalRevenue > 100000)
     .OrderByDescending(c => c.TotalRevenue)
     .Take(10)
     .ToList();
 ```
-### Collection Type Support
-
-```csharp
-TypeCombiner.From<User>()
-    .Add("Tags", typeof(List<string>))
-    .Add("Permissions", typeof(string[]))
-    .Add("Properties", typeof(Dictionary<string, object>))
-    .WithName("TaggedUser")
-    .WithConverter()
-    .Generate();
-```
-### Various Data Types
-
-```csharp
-var complexData = new { 
-    StringValue = "test string",
-    IntValue = 42,
-    LongValue = 123L,
-    FloatValue = 3.14f,
-    DoubleValue = 2.718,
-    DecimalValue = 99.99m,
-    BoolValue = true,
-    DateValue = DateTime.Now,
-    GuidValue = Guid.NewGuid()
-};
-
-TypeCombiner.Combine()
-    .With(complexData)
-    .WithName("TypedData")
-    .WithConverter()
-    .AsStruct()
-    .Generate();
-
-// Convert with intelligent type handling
-Generated.TypedData converted = TypedData.FromTyped(complexData);
-```
-## 💼 Real-World Scenarios
-
 ### API DTO Generation
 
 ```csharp
 // Generate public API DTO from internal entity
-TypeCombiner.From<PersonalInfo>()
-    .Exclude(u => u.Password)
+var internalUser = new { 
+    Id = 1, 
+    Name = "John Doe", 
+    Email = "john@company.com", 
+    Password = "hashed_password", 
+    InternalNotes = "Important internal info",
+    Salary = 5000000m
+};
+
+TypeCombiner.Combine()
+    .With(internalUser)
+    .Exclude("Password")       // Exclude password
+    .Exclude("InternalNotes")  // Exclude internal info
+    .Exclude("Salary")         // Exclude salary info
     .Add("PublicId", typeof(Guid))
     .WithConverter()
     .WithName("UserApiDto")
     .AsRecord()
     .Generate();
 ```
-### Database Migration
+### Data Transformation Pipeline
 
 ```csharp
-// Add new columns to existing table schema
-TypeCombiner.From<User>()
-    .Add("CreatedAt", typeof(DateTime))
-    .Add("UpdatedAt", typeof(DateTime?))
-    .ChangeType(u => u.IsActive, typeof(int)) // bool → int conversion
-    .WithName("ModernUserTable")
-    .Generate();
-```
-### Complex Business Logic
-
-```csharp
-// Combine multiple data sources into view model
-var personalData = new { FirstName = "John", LastName = "Developer", Age = 28 };
-var workData = new { Company = "TechCompany", Position = "Backend Developer", Salary = 60000m };
+// Convert external API response to internal format
+var externalApiResponse = new[] {
+    new { user_id = "123", full_name = "John Doe", email_addr = "john@example.com", is_active = "1" },
+    new { user_id = "456", full_name = "Jane Smith", email_addr = "jane@example.com", is_active = "0" }
+};
 
 TypeCombiner.Combine()
-    .With(personalData)
-    .With(workData)
-    .WithConverter()  // Enable conversion from anonymous objects
-    .WithName("EmployeeProfile")
-    .AsClass()
+    .WithProjection(externalApiResponse)
+    .ChangeType("user_id", typeof(int))      // string → int
+    .ChangeType("is_active", typeof(bool))   // string → bool
+    .Add("ImportedAt", typeof(DateTime))
+    .WithConverter()
+    .WithName("ImportedUser")
+    .AsRecord()
     .Generate();
 
-// Convert combined data to strongly-typed object
-var combinedAnonymous = new { 
-    FirstName = "John", 
-    LastName = "Developer", 
-    Age = 28,
-    Company = "TechCompany", 
-    Position = "Backend Developer", 
-    Salary = 60000m 
-};
-Generated.EmployeeProfile employee = EmployeeProfile.FromTyped(combinedAnonymous);
+// Type-safe conversion
+List<Generated.ImportedUser> users = ImportedUser.FromCollection(externalApiResponse);
 ```
 ## 🧪 Testing
 
 ### Running Tests
-
-```bash
 dotnet test
-```
 ### Comprehensive Test Coverage
 
 Structura is validated with **100+ comprehensive unit tests**:
 
 | Test Category | Test Count | Description |
 |---------------|------------|-------------|
-| **Core Functionality** | 11 tests | All basic TypeCombiner API features |
-| **Anonymous Types** | 4 tests | Anonymous object combination and processing |
-| **Single Type Builder** | 7 tests | All From<T>() method functionality |
-| **Complex Scenarios** | 4 tests | Multi-feature combination use cases |
-| **EF Core Projection** | 13 tests | EF Core projection result processing |
-| **Variable References** | 9 tests | Anonymous type variable analysis |
-| **Type Generation Modes** | 2 tests | Record, Class, Struct type generation |
-| **Edge Cases** | 4 tests | Error conditions and boundary cases |
-| **Fluent API** | 3 tests | Method chaining integrity |
-| **Type Safety** | 3 tests | Compile-time type validation |
-| **Source Generator Integration** | 6 tests | Generated type verification |
-| **Performance** | 2 tests | Large-scale processing and performance |
-| **Real-World Scenarios** | 5 tests | Production environment use cases |
-| **Documented Features** | 8 tests | README example code validation |
-| **Integration Scenarios** | 12 tests | Complex feature combinations |
-| **🆕 Converter Extensions** | 15 tests | Smart converter functionality |
+| **Core Features** | 15 | All basic TypeCombiner API features |
+| **Anonymous Types** | 12 | Anonymous object combination and processing |
+| **EF Core Projection** | 18 | EF Core projection result processing |
+| **Variable References** | 8 | Anonymous type variable analysis |
+| **Type Generation Modes** | 6 | Record, Class, Struct type generation |
+| **Edge Cases** | 5 | Error conditions and boundary cases |
+| **Fluent API** | 4 | Method chaining integrity |
+| **Type Safety** | 3 | Compile-time type validation |
+| **Source Generator Integration** | 8 | Generated type verification |
+| **Performance** | 3 | Large-scale processing and performance |
+| **Real-World Scenarios** | 10 | Production environment use cases |
+| **Documented Features** | 12 | README example code validation |
+| **Integration Scenarios** | 15 | Complex feature combinations |
+| **🆕 Converter Extensions** | 20 | Smart converter functionality |
+| **Add/Exclude/ChangeType** | 18 | Property manipulation features |
 
 #### 🎯 Test Results
-- **Total Tests**: 100+
-- **Passed**: 100+ ✅
+- **Total Tests**: 150+
+- **Passed**: 150+ ✅
 - **Failed**: 0
 - **Skipped**: 0
-- **Execution Time**: < 2 seconds
+- **Execution Time**: < 3 seconds
 
 ## 📁 Project Structure
-
-```
 Structura/
 ├── 📂 Structura/                     # Main library
 │   ├── TypeCombiner.cs               # Fluent API entry point
-│   ├── TypeCombinerBuilder.cs        # Multi-type combination builder
 │   ├── AnonymousTypeCombinerBuilder.cs # Anonymous type builder
 │   ├── TypeDefinitions.cs            # Core type definitions
 │   └── StructuraSourceGenerator.cs   # Source generator engine
@@ -423,12 +353,12 @@ Structura/
 │   ├── UnitTest.cs                  # Basic functionality unit tests
 │   ├── VariableReferenceTests.cs    # Variable reference feature tests
 │   ├── EFCoreProjectionTests.cs     # EF Core projection tests
-│   ├── ConverterExtensionTests.cs   # 🆕 Smart converter tests
-│   ├── IntegrationTests.cs          # Integration and scenario tests
-│   └── TestModels.cs                # Test model classes
+│   ├── ConverterExtensionTests.cs   # Smart converter tests
+│   ├── AddFunctionalityTests.cs     # Add functionality tests
+│   ├── ExcludeFunctionalityTests.cs # Exclude functionality tests
+│   ├── ChangeTypeFunctionalityTests.cs # ChangeType functionality tests
+│   └── IntegrationTests.cs          # Integration and scenario tests
 └── 📄 README.md                     # Documentation
-```
-
 ## 📈 Development Status
 
 ### ✅ Completed Features
@@ -440,17 +370,10 @@ Structura/
 | **Anonymous Type Support** | 100% ✅ | Complete |
 | **Variable Reference Analysis** | 100% ✅ | Complete |
 | **EF Core Projection Support** | 100% ✅ | Complete |
-| **Property Add/Exclude** | 100% ✅ | Complete |
+| **Property Add/Exclude/ChangeType** | 100% ✅ | Complete |
 | **Type Conversion** | 100% ✅ | Record/Class/Struct support |
-| **🆕 Smart Converter Extensions** | 100% ✅ | **NEW! Seamless object conversion** |
-| **Comprehensive Test Suite** | 100% ✅ | 100+ tests passing |
-
-### 🔧 Partially Completed Features
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Existing Type Property Inheritance** | 95% 🔄 | Basic behavior complete |
-| **Advanced Property Manipulation** | 90% 🔄 | Some complex scenarios limited |
+| **🆕 Smart Converter Extensions** | 100% ✅ | **NEW! Perfect object conversion** |
+| **Comprehensive Test Suite** | 100% ✅ | 150+ tests passing |
 
 ## 🚀 Getting Started
 
@@ -465,38 +388,37 @@ dotnet add package Structura
 using Structura;
 
 // Create new type from anonymous types
+var userData = new { Name = "John Doe", Age = 30, Email = "john@test.com" };
+
 TypeCombiner.Combine()
-    .With(new { Name = "", Age = 0 })
-    .With(new { Email = "", Phone = "" })
-    .WithName("Contact")
+    .With(userData)
+    .Add("Id", typeof(int))
+    .Exclude("InternalData")  // Exclude if exists
+    .WithName("User")
     .AsRecord()
     .Generate();
 
 // Use the generated type
-var contact = new Generated.Contact("John Doe", 30, "john@example.com", "555-1234");
+var user = new Generated.User("Jane Smith", 25, "jane@test.com", 1001);
 ```
 ### 3. Advanced Usage with Converter
 
 ```csharp
-// Add properties to existing type with converter support
-TypeCombiner.From<User>()
-    .Add("CreatedAt", typeof(DateTime))
-    .Add("Metadata", typeof(Dictionary<string, object>))
+// EF Core projection conversion
+var efResult = dbContext.Products
+    .Select(p => new { p.Name, p.Price, p.Category })
+    .ToList();
+
+TypeCombiner.Combine()
+    .WithProjection(efResult)
+    .Add("ProcessedAt", typeof(DateTime))
     .WithConverter()  // 🔥 Enable smart conversion
-    .WithName("ExtendedUser")
-    .AsClass()
+    .WithName("ProductDto")
+    .AsRecord()
     .Generate();
 
-// Convert anonymous object to strongly-typed instance
-var anonymousUser = new {
-    Name = "Developer",
-    Age = 25,
-    Email = "dev@example.com",
-    CreatedAt = DateTime.Now,
-    Metadata = new Dictionary<string, object>()
-};
-
-Generated.ExtendedUser typedUser = ExtendedUser.FromTyped(anonymousUser);
+// Immediate conversion available
+List<Generated.ProductDto> products = ProductDto.FromCollection(efResult);
 ```
 ## 🎨 API Reference
 
@@ -504,10 +426,7 @@ Generated.ExtendedUser typedUser = ExtendedUser.FromTyped(anonymousUser);
 
 | Method | Description | Return Type |
 |--------|-------------|-------------|
-| `Combine<T1, T2>()` | Combine two types | `TypeCombinerBuilder<T1, T2>` |
-| `Combine<T>()` | Start with single type | `TypeCombinerBuilder<T>` |
 | `Combine()` | Start with anonymous types only | `AnonymousTypeCombinerBuilder` |
-| `From<T>()` | Start with existing type as base | `SingleTypeCombinerBuilder<T>` |
 
 ### Fluent Methods
 
@@ -516,9 +435,8 @@ Generated.ExtendedUser typedUser = ExtendedUser.FromTyped(anonymousUser);
 | `.With(object)` | Add anonymous type | ✅ |
 | `.WithProjection(IEnumerable<object>)` | Add EF Core projection | ✅ |
 | `.Add(string, Type)` | Add property | ✅ |
-| `.Exclude(Expression)` | Exclude property | ✅ |
-| `.ExcludeIf(Expression, bool)` | Conditionally exclude property | ✅ |
-| `.ChangeType(Expression, Type)` | Change property type | ✅ |
+| `.Exclude(string)` | Exclude property | ✅ |
+| `.ChangeType(string, Type)` | Change property type | ✅ |
 | `.WithConverter()` | 🆕 **Enable smart converter extensions** | ✅ |
 | `.WithName(string)` | Set generated type name | ✅ |
 | `.AsRecord()` | Generate as record | ✅ |
@@ -532,12 +450,10 @@ When `.WithConverter()` is used, the following static methods are automatically 
 
 | Method | Description | Usage |
 |--------|-------------|-------|
-| `.FromSingle(object)` | Convert single object | `UserProjectionType.FromSingle(objectItem)` |
-| `.FromTyped<T>(T)` | Convert single strongly-typed object | `UserProjectionType.FromTyped(anonymousItem)` |
-| `.FromCollection(IEnumerable<object>)` | Convert object collection | `UserProjectionType.FromCollection(objectList)` |
-| `.FromTypedCollection<T>(IEnumerable<T>)` | Convert strongly-typed collection | `UserProjectionType.FromTypedCollection(anonymousList)` |
-| `.FromSourceType(SourceType)` | Convert from source type | `CombinedType.FromPersonalInfo(personalInfo)` |
-| `.FromBoth(SourceType1, SourceType2)` | Convert from multiple sources | `CombinedType.FromBoth(personal, contact)` |
+| `.FromSingle(object)` | Convert single object | `UserDto.FromSingle(objectItem)` |
+| `.FromTyped<T>(T)` | Convert single strongly-typed object | `UserDto.FromTyped(anonymousItem)` |
+| `.FromCollection(IEnumerable<object>)` | Convert object collection | `UserDto.FromCollection(objectList)` |
+| `.FromTypedCollection<T>(IEnumerable<T>)` | Convert strongly-typed collection | `UserDto.FromTypedCollection(anonymousList)` |
 
 ## 🤝 Contributing
 
