@@ -1,4 +1,4 @@
-﻿![Structura Logo](logo.png)
+﻿<img src="./logo.png" width="64" height="64">
 
 # Structura
 
