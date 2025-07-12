@@ -11,7 +11,7 @@
     
     <!-- Package Information -->
     <PackageId>Structura</PackageId>
-    <PackageVersion>0.9.0-beta</PackageVersion>
+    <PackageVersion>0.9.1-beta</PackageVersion>
     <Title>Structura - Source Generator-Based Type Manipulation Library</Title>
     <Description>A .NET library that automatically generates new types through source generators when you define type creation and manipulation rules using a fluent API. Supports type combination, anonymous types, EF Core projections, advanced property manipulation, and static converter methods directly on generated types for seamless object conversion.</Description>
     <Summary>Source generator-based fluent API type manipulation library with static converter methods on generated types for .NET</Summary>
@@ -29,9 +29,14 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>
-      Version 0.9.0-beta Release Notes:
+      Version 0.9.1-beta Release Notes:
       
-      🚀 New Features:
+      🔧 Fixed Issues:
+      - Fixed NuGet package structure to include both runtime library and source generator
+      - TypeCombiner class is now accessible from NuGet packages
+      - Resolved packaging configuration issues
+      
+      🚀 Features:
       - Complete anonymous type support with variable reference analysis
       - EF Core projection result type generation
       - Advanced property manipulation (Add, Exclude, ChangeType)
@@ -68,8 +73,7 @@
       For full documentation and examples, visit: https://github.com/dimohy/structura
     </PackageReleaseNotes>
     
-    <!-- Development Dependencies -->
-    <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- Package Configuration -->
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
@@ -91,11 +95,12 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
   </ItemGroup>
+  
   <ItemGroup>
     <None Remove="bin\Debug\netstandard2.0\\Structura.dll" />
   </ItemGroup>
 
-  <!-- Source Generator Target -->
+  <!-- Include source generator in analyzers folder -->
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\cs\$(AssemblyName).dll" Visible="false" />
   </ItemGroup>

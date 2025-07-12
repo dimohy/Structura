@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coreProperties xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.openxmlformats.org/package/2006/metadata/core-properties">
+  <dc:creator>dimohy</dc:creator>
+  <dc:description>A .NET library that automatically generates new types through source generators when you define type creation and manipulation rules using a fluent API. Supports type combination, anonymous types, EF Core projections, advanced property manipulation, and static converter methods directly on generated types for seamless object conversion.</dc:description>
+  <dc:identifier>Structura</dc:identifier>
+  <version>0.9.1-beta</version>
+  <keywords>source-generator fluent-api type-manipulation code-generation csharp dotnet types ef-core projection converter extension-methods</keywords>
+  <lastModifiedBy>NuGet.Build.Tasks.Pack, Version=6.15.0.57, Culture=neutral, PublicKeyToken=31bf3856ad364e35;.NET Standard 2.0</lastModifiedBy>
+</coreProperties>
