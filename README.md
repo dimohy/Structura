@@ -105,7 +105,7 @@ var anonymousData = new[] {
     new { CustomerId = 1, CustomerName = "John Doe", TotalOrders = 5, TotalSpent = 150000m },
     new { CustomerId = 2, CustomerName = "Jane Smith", TotalOrders = 3, TotalSpent = 75000m }
 };
-List<Generated.CustomerAnalytics> converted = CustomerAnalytics.FromTypedCollection(anonymousData);
+List<Generated.CustomerAnalytics> converted = CustomerAnalytics.FromCollection(anonymousData);
 ```
 ### 4. Property Manipulation Features
 
@@ -451,9 +451,7 @@ When `.WithConverter()` is used, the following static methods are automatically 
 | Method | Description | Usage |
 |--------|-------------|-------|
 | `.FromSingle(object)` | Convert single object | `UserDto.FromSingle(objectItem)` |
-| `.FromTyped<T>(T)` | Convert single strongly-typed object | `UserDto.FromTyped(anonymousItem)` |
 | `.FromCollection(IEnumerable<object>)` | Convert object collection | `UserDto.FromCollection(objectList)` |
-| `.FromTypedCollection<T>(IEnumerable<T>)` | Convert strongly-typed collection | `UserDto.FromTypedCollection(anonymousList)` |
 
 ## 🤝 Contributing
 
