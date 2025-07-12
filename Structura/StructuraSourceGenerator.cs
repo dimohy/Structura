@@ -10,21 +10,21 @@ using System.Text;
 namespace Structura.SourceGenerators
 {
     /// <summary>
-    /// Structura 타입 조합을 위한 소스 생성기
+    /// Source generator for Structura type combination
     /// </summary>
     [Generator]
     public class StructuraSourceGenerator : IIncrementalGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // TypeCombiner.Generate() 호출을 찾는 신택스 프로바이더
+            // Find TypeCombiner.Generate() calls in the syntax tree
             var generateCalls = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (node, _) => IsGenerateMethodCall(node),
                     transform: static (ctx, _) => GetGenerateCallInfo(ctx))
                 .Where(static info => info != null);
 
-            // 수집된 모든 호출을 결합하여 소스 생성
+            // Generate source for all found calls
             context.RegisterSourceOutput(
                 generateCalls.Collect(),
                 static (spc, generateCalls) => GenerateTypes(spc, generateCalls));
@@ -42,7 +42,7 @@ namespace Structura.SourceGenerators
             var invocation = (InvocationExpressionSyntax)context.Node;
             var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
 
-            // 플루언트 체이닝을 분석하여 타입 생성 정보
+            // Analyze fluent chain to extract type generation information
             var chainInfo = AnalyzeFluentChain(memberAccess.Expression, context.SemanticModel);
             if (chainInfo == null)
                 return null;
@@ -52,7 +52,8 @@ namespace Structura.SourceGenerators
                 TargetTypeName = chainInfo.TypeName,
                 SourceTypes = chainInfo.SourceTypes,
                 Operations = chainInfo.Operations,
-                GenerationMode = chainInfo.GenerationMode
+                GenerationMode = chainInfo.GenerationMode,
+                EnableConverter = chainInfo.EnableConverter
             };
         }
 
@@ -62,6 +63,7 @@ namespace Structura.SourceGenerators
             var sourceTypes = new List<INamedTypeSymbol>();
             string typeName = "";
             var generationMode = TypeGenerationMode.Record;
+            bool enableConverter = false;
 
             var current = expression;
             while (current != null)
@@ -76,6 +78,10 @@ namespace Structura.SourceGenerators
                             if (operation.OperationType == FluentOperationType.WithName)
                             {
                                 typeName = operation.StringValue ?? "";
+                            }
+                            else if (operation.OperationType == FluentOperationType.WithConverter)
+                            {
+                                enableConverter = true;
                             }
                             else if (operation.OperationType == FluentOperationType.AsRecord)
                             {
@@ -102,7 +108,7 @@ namespace Structura.SourceGenerators
                         break;
 
                     case MemberAccessExpressionSyntax memberAccessExpr:
-                        // TypeCombiner.Combine<T1, T2>() 또는 TypeCombiner.From<T>() 분석
+                        // Parse TypeCombiner.Combine<T1, T2>() or TypeCombiner.From<T>()
                         if (memberAccessExpr.Expression is IdentifierNameSyntax identifier 
                             && identifier.Identifier.ValueText == "TypeCombiner")
                         {
@@ -136,7 +142,8 @@ namespace Structura.SourceGenerators
                 TypeName = typeName,
                 SourceTypes = sourceTypes,
                 Operations = operations,
-                GenerationMode = generationMode
+                GenerationMode = generationMode,
+                EnableConverter = enableConverter
             };
         }
 
@@ -155,6 +162,8 @@ namespace Structura.SourceGenerators
                         OperationType = FluentOperationType.WithName,
                         StringValue = GetStringLiteralValue(invocation.ArgumentList.Arguments.FirstOrDefault())
                     };
+                case "WithConverter":
+                    return new FluentOperation { OperationType = FluentOperationType.WithConverter };
                 case "Exclude":
                     return new FluentOperation
                     {
@@ -229,7 +238,7 @@ namespace Structura.SourceGenerators
 
         private static string? ExtractPropertyName(ArgumentSyntax? argument)
         {
-            // Lambda 표현식에서 속성 이름 추출 (간단한 케이스만)
+            // Extract property name from lambda expression (simplified version)
             if (argument?.Expression is SimpleLambdaExpressionSyntax lambda
                 && lambda.Body is MemberAccessExpressionSyntax memberAccess)
             {
@@ -240,7 +249,7 @@ namespace Structura.SourceGenerators
 
         private static string? ExtractTypeOfValue(ArgumentSyntax? argument)
         {
-            // typeof(Type) 에서 Type 추출
+            // Extract Type from typeof(Type) expression
             if (argument?.Expression is TypeOfExpressionSyntax typeOf)
             {
                 return typeOf.Type.ToString();
@@ -249,7 +258,7 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// EF Core projection 결과 분석
+        /// Analyze EF Core projection results
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeProjection(ArgumentSyntax? argument, SemanticModel semanticModel)
         {
@@ -259,11 +268,11 @@ namespace Structura.SourceGenerators
             switch (argument.Expression)
             {
                 case IdentifierNameSyntax identifier:
-                    // 변수 참조: projectionResult
+                    // Variable reference: projectionResult
                     return AnalyzeProjectionVariable(identifier, semanticModel);
 
                 case MemberAccessExpressionSyntax memberAccess:
-                    // 속성/필드 접근: this.ProjectionResult
+                    // Property/field reference: this.ProjectionResult
                     return AnalyzeProjectionMemberAccess(memberAccess, semanticModel);
 
                 default:
@@ -272,27 +281,27 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// projection 변수 분석 - List<익명타입>에서 스키마 추출
+        /// Analyze projection variable - extract properties from List&lt;AnonymousType&gt;
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeProjectionVariable(IdentifierNameSyntax identifier, SemanticModel semanticModel)
         {
-            // 변수의 타입 정보를 가져옴
+            // Get type information for the variable
             var typeInfo = semanticModel.GetTypeInfo(identifier);
             if (typeInfo.Type is not INamedTypeSymbol namedType)
                 return null;
 
-            // IEnumerable<T>, List<T>, ICollection<T> 등의 컬렉션 타입인지 확인
+            // Check for collection types like IEnumerable<T>, List<T>, ICollection<T>
             var elementType = GetCollectionElementType(namedType);
             if (elementType == null)
                 return null;
 
-            // 익명 타입인지 확인
+            // Check if it's an anonymous type
             if (!elementType.IsAnonymousType)
                 return null;
 
             var properties = new List<(string Name, string Type)>();
             
-            // 익명 타입의 속성들을 추출
+            // Extract properties from the anonymous type
             foreach (var member in elementType.GetMembers())
             {
                 if (member is IPropertySymbol property && 
@@ -308,27 +317,27 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// projection 멤버 접근 분석
+        /// Analyze projection member access
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeProjectionMemberAccess(MemberAccessExpressionSyntax memberAccess, SemanticModel semanticModel)
         {
-            // 멤버 접근의 타입 정보를 가져옴
+            // Get type information for the member access
             var typeInfo = semanticModel.GetTypeInfo(memberAccess);
             if (typeInfo.Type is not INamedTypeSymbol namedType)
                 return null;
 
-            // 컬렉션 타입의 요소 타입 추출
+            // Extract element type from collection type
             var elementType = GetCollectionElementType(namedType);
             if (elementType == null)
                 return null;
 
-            // 익명 타입인지 확인
+            // Check if it's an anonymous type
             if (!elementType.IsAnonymousType)
                 return null;
 
             var properties = new List<(string Name, string Type)>();
             
-            // 익명 타입의 속성들을 추출
+            // Extract properties from the anonymous type
             foreach (var member in elementType.GetMembers())
             {
                 if (member is IPropertySymbol property && 
@@ -344,11 +353,11 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 컬렉션 타입에서 요소 타입 추출
+        /// Extract element type from collection type
         /// </summary>
         private static INamedTypeSymbol? GetCollectionElementType(INamedTypeSymbol collectionType)
         {
-            // IEnumerable<T>, List<T>, ICollection<T> 등에서 T 추출
+            // Extract T from IEnumerable<T>, List<T>, ICollection<T>
             if (collectionType.IsGenericType && collectionType.TypeArguments.Length == 1)
             {
                 var elementType = collectionType.TypeArguments[0];
@@ -358,7 +367,7 @@ namespace Structura.SourceGenerators
                 }
             }
 
-            // 인터페이스 중에서 IEnumerable<T> 찾기
+            // Search for IEnumerable<T> in interfaces
             foreach (var interfaceType in collectionType.AllInterfaces)
             {
                 if (interfaceType.IsGenericType && 
@@ -377,7 +386,7 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 무명 타입 분석 - 기존 변수나 직접 생성 모두 지원
+        /// Analyze anonymous type - handle both direct creation and variable references
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeAnonymousType(ArgumentSyntax? argument, SemanticModel semanticModel)
         {
@@ -387,15 +396,15 @@ namespace Structura.SourceGenerators
             switch (argument.Expression)
             {
                 case AnonymousObjectCreationExpressionSyntax anonymousObj:
-                    // 직접 무명 객체 생성: new { Name = "", Age = 0 }
+                    // Direct anonymous object creation: new { Name = "", Age = 0 }
                     return AnalyzeDirectAnonymousObject(anonymousObj);
 
                 case IdentifierNameSyntax identifier:
-                    // 변수 참조: anonymousInstance
+                    // Variable reference: anonymousInstance
                     return AnalyzeVariableReference(identifier, semanticModel);
 
                 case MemberAccessExpressionSyntax memberAccess:
-                    // 속성/필드 접근: this.SomeAnonymousObject
+                    // Property/field reference: this.SomeAnonymousObject
                     return AnalyzeMemberAccess(memberAccess, semanticModel);
 
                 default:
@@ -404,7 +413,7 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 직접 무명 객체 생성 분석
+        /// Analyze direct anonymous object creation
         /// </summary>
         private static List<(string Name, string Type)> AnalyzeDirectAnonymousObject(AnonymousObjectCreationExpressionSyntax anonymousObj)
         {
@@ -416,25 +425,25 @@ namespace Structura.SourceGenerators
                 {
                     string name;
                     
-                    // 속성 이름 결정
+                    // Determine property name
                     if (declarator.NameEquals != null)
                     {
-                        // 명시적 이름: new { Name = "value" }
+                        // Explicit name: new { Name = "value" }
                         name = declarator.NameEquals.Name.Identifier.ValueText;
                     }
                     else if (declarator.Expression is IdentifierNameSyntax identifierExpr)
                     {
-                        // 암시적 이름: new { variable }
+                        // Implicit name: new { variable }
                         name = identifierExpr.Identifier.ValueText;
                     }
                     else if (declarator.Expression is MemberAccessExpressionSyntax memberExpr)
                     {
-                        // 멤버 접근: new { obj.Property }
+                        // Member access: new { obj.Property }
                         name = memberExpr.Name.Identifier.ValueText;
                     }
                     else
                     {
-                        continue; // 지원하지 않는 표현식은 스킵
+                        continue; // Skip unhandled expressions
                     }
 
                     var type = InferTypeFromExpression(declarator.Expression);
@@ -446,22 +455,22 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 변수 참조 분석 - SemanticModel을 사용하여 정확한 타입 정보 추출
+        /// Analyze variable reference - use SemanticModel for accurate type information
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeVariableReference(IdentifierNameSyntax identifier, SemanticModel semanticModel)
         {
-            // 변수의 타입 정보를 가져옴
+            // Get type information for the variable
             var typeInfo = semanticModel.GetTypeInfo(identifier);
             if (typeInfo.Type is not INamedTypeSymbol namedType)
                 return null;
 
-            // 익명 타입인지 확인
+            // Check if it's an anonymous type
             if (!namedType.IsAnonymousType)
                 return null;
 
             var properties = new List<(string Name, string Type)>();
             
-            // 익명 타입의 속성들을 추출
+            // Extract properties from the anonymous type
             foreach (var member in namedType.GetMembers())
             {
                 if (member is IPropertySymbol property && 
@@ -477,22 +486,22 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 멤버 접근 분석 (this.field, obj.property 등)
+        /// Analyze member access (this.field, obj.property, etc.)
         /// </summary>
         private static List<(string Name, string Type)>? AnalyzeMemberAccess(MemberAccessExpressionSyntax memberAccess, SemanticModel semanticModel)
         {
-            // 멤버 접근의 타입 정보를 가져옴
+            // Get type information for the member access
             var typeInfo = semanticModel.GetTypeInfo(memberAccess);
             if (typeInfo.Type is not INamedTypeSymbol namedType)
                 return null;
 
-            // 익명 타입인지 확인
+            // Check if it's an anonymous type
             if (!namedType.IsAnonymousType)
                 return null;
 
             var properties = new List<(string Name, string Type)>();
             
-            // 익명 타입의 속성들을 추출
+            // Extract properties from the anonymous type
             foreach (var member in namedType.GetMembers())
             {
                 if (member is IPropertySymbol property && 
@@ -508,7 +517,7 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 표현식으로부터 타입 추론 (기본적 방법)
+        /// Infer type from expression (basic implementation)
         /// </summary>
         private static string InferTypeFromExpression(ExpressionSyntax expression)
         {
@@ -518,19 +527,19 @@ namespace Structura.SourceGenerators
                     return InferTypeFromLiteral(literal);
 
                 case IdentifierNameSyntax identifier:
-                    // 변수 참조의 경우 기본적으로 object 반환
+                    // For variable references, default to object
                     return "object";
 
                 case MemberAccessExpressionSyntax memberAccess:
-                    // 멤버 접근의 경우 기본적으로 object 반환
+                    // For member access, default to object
                     return "object";
 
                 case InvocationExpressionSyntax invocation:
-                    // 메서드 호출의 경우 기본적으로 object 반환
+                    // For method calls, default to object
                     return "object";
 
                 case ArrayCreationExpressionSyntax arrayCreation:
-                    // 배열 생성
+                    // Array creation
                     if (arrayCreation.Type.ElementType != null)
                     {
                         return $"{arrayCreation.Type.ElementType}[]";
@@ -538,7 +547,7 @@ namespace Structura.SourceGenerators
                     return "object[]";
 
                 case ObjectCreationExpressionSyntax objectCreation:
-                    // 객체 생성
+                    // Object creation
                     return objectCreation.Type?.ToString() ?? "object";
 
                 default:
@@ -547,7 +556,7 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 리터럴로부터 타입 추론
+        /// Infer type from literal
         /// </summary>
         private static string InferTypeFromLiteral(LiteralExpressionSyntax literal)
         {
@@ -558,23 +567,23 @@ namespace Structura.SourceGenerators
             {
                 var text = literal.Token.ValueText;
                 
-                // decimal 리터럴
+                // decimal literal
                 if (text.EndsWith("m", System.StringComparison.OrdinalIgnoreCase))
                     return "decimal";
                     
-                // float 리터럴
+                // float literal
                 if (text.EndsWith("f", System.StringComparison.OrdinalIgnoreCase))
                     return "float";
                     
-                // long 리터럴
+                // long literal
                 if (text.EndsWith("l", System.StringComparison.OrdinalIgnoreCase))
                     return "long";
                     
-                // double 리터럴 (소수점 포함)
+                // double literal (contains decimal point)
                 if (text.Contains('.'))
                     return "double";
                     
-                // int 리터럴
+                // int literal
                 return "int";
             }
             
@@ -596,6 +605,13 @@ namespace Structura.SourceGenerators
 
                 var sourceCode = GenerateTypeSource(callInfo);
                 context.AddSource($"{callInfo.TargetTypeName}.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
+
+                // ?? 새로운 기능: WithConverter()가 활성화된 경우 컨버터 생성
+                if (callInfo.EnableConverter)
+                {
+                    var converterCode = GenerateConverterSource(callInfo);
+                    context.AddSource($"{callInfo.TargetTypeName}Converter.g.cs", SourceText.From(converterCode, Encoding.UTF8));
+                }
             }
         }
 
@@ -608,6 +624,10 @@ namespace Structura.SourceGenerators
             sb.AppendLine("// Supports variable reference analysis and EF Core projection results");
             sb.AppendLine("#nullable enable");
             sb.AppendLine();
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using System.Linq;");
+            sb.AppendLine();
             sb.AppendLine("namespace Generated");
             sb.AppendLine("{");
 
@@ -615,12 +635,16 @@ namespace Structura.SourceGenerators
 
             if (callInfo.GenerationMode == TypeGenerationMode.Record)
             {
-                // 레코드 타입 생성
+                // Generate record type
                 sb.AppendLine($"    /// <summary>");
                 sb.AppendLine($"    /// Generated record type: {callInfo.TargetTypeName}");
                 sb.AppendLine($"    /// Properties analyzed from anonymous types, variable references, and EF Core projections");
+                if (callInfo.EnableConverter)
+                {
+                    sb.AppendLine($"    /// Static converter methods: {callInfo.TargetTypeName}.FromCollection(), {callInfo.TargetTypeName}.FromSingle()");
+                }
                 sb.AppendLine($"    /// </summary>");
-                sb.AppendLine($"    public record {callInfo.TargetTypeName}(");
+                sb.AppendLine($"    public partial record {callInfo.TargetTypeName}(");
                 for (int i = 0; i < properties.Count; i++)
                 {
                     var (name, type) = properties[i];
@@ -634,20 +658,24 @@ namespace Structura.SourceGenerators
             }
             else
             {
-                // 클래스 또는 구조체 타입 생성
+                // Generate class or struct type
                 var typeKeyword = callInfo.GenerationMode == TypeGenerationMode.Class ? "class" : "struct";
                 sb.AppendLine($"    /// <summary>");
                 sb.AppendLine($"    /// Generated {typeKeyword} type: {callInfo.TargetTypeName}");
                 sb.AppendLine($"    /// Properties analyzed from anonymous types, variable references, and EF Core projections");
+                if (callInfo.EnableConverter)
+                {
+                    sb.AppendLine($"    /// Static converter methods: {callInfo.TargetTypeName}.FromCollection(), {callInfo.TargetTypeName}.FromSingle()");
+                }
                 sb.AppendLine($"    /// </summary>");
-                sb.AppendLine($"    public {typeKeyword} {callInfo.TargetTypeName}");
+                sb.AppendLine($"    public partial {typeKeyword} {callInfo.TargetTypeName}");
                 sb.AppendLine("    {");
 
                 foreach (var (name, type) in properties)
                 {
                     sb.AppendLine($"        /// <summary>Property: {name} (Type: {type})</summary>");
                     
-                    // 참조 타입인 경우 required 키워드 추가하여 CS8618 경고 해결
+                    // Add required keyword for reference types to resolve CS8618 warnings
                     var isReferenceType = IsReferenceType(type);
                     var requiredKeyword = isReferenceType ? "required " : "";
                     
@@ -664,11 +692,457 @@ namespace Structura.SourceGenerators
         }
 
         /// <summary>
-        /// 타입이 참조 타입인지 확인
+        /// ?? **Generate Static Converter Methods** - Creates static methods on the generated type itself
+        /// </summary>
+        private static string GenerateConverterSource(GenerateCallInfo callInfo)
+        {
+            var sb = new StringBuilder();
+            var properties = CollectProperties(callInfo);
+            var typeName = callInfo.TargetTypeName;
+            
+            sb.AppendLine("// <auto-generated />");
+            sb.AppendLine("// This code was generated by Structura Source Generator - Static Converter Methods");
+            sb.AppendLine("// Enables seamless conversion from anonymous objects to strongly-typed instances");
+            sb.AppendLine("#nullable enable");
+            sb.AppendLine();
+            sb.AppendLine("using System;");
+            sb.AppendLine("using System.Collections.Generic;");
+            sb.AppendLine("using System.Linq;");
+            sb.AppendLine();
+            sb.AppendLine("namespace Generated");
+            sb.AppendLine("{");
+            sb.AppendLine($"    /// <summary>");
+            sb.AppendLine($"    /// ?? **Static Converter Methods** for {typeName}");
+            sb.AppendLine($"    /// Automatically generated when .WithConverter() is used");
+            sb.AppendLine($"    /// </summary>");
+            sb.AppendLine($"    public partial {GetTypeKeyword(callInfo.GenerationMode)} {typeName}");
+            sb.AppendLine("    {");
+
+            // Generate collection converter for anonymous objects
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// ?? **Converts** anonymous object collection to {typeName} list");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        public static List<{typeName}> FromCollection(IEnumerable<object> source)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (source == null)");
+            sb.AppendLine($"                throw new ArgumentNullException(nameof(source));");
+            sb.AppendLine();
+            sb.AppendLine($"            return source.Select(FromSingle).ToList();");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+
+            // Generate collection converter for strongly-typed anonymous objects
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// ?? **Converts** strongly-typed anonymous object collection to {typeName} list");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        public static List<{typeName}> FromTypedCollection<T>(IEnumerable<T> source)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (source == null)");
+            sb.AppendLine($"                throw new ArgumentNullException(nameof(source));");
+            sb.AppendLine();
+            sb.AppendLine($"            return source.Select(FromTyped<T>).ToList();");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+
+            // Generate single object converter for anonymous objects
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// ?? **Converts** single anonymous object to {typeName}");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        public static {typeName} FromSingle(object source)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (source == null)");
+            sb.AppendLine($"                throw new ArgumentNullException(nameof(source));");
+            sb.AppendLine();
+            sb.AppendLine("            dynamic dynamicSource = source;");
+            sb.AppendLine();
+
+            // Generate property extraction and mapping code based on generation mode
+            if (callInfo.GenerationMode == TypeGenerationMode.Record)
+            {
+                // Record constructor parameters
+                sb.AppendLine($"            return new {typeName}(");
+                for (int i = 0; i < properties.Count; i++)
+                {
+                    var property = properties[i];
+                    var name = property.Name;
+                    var type = property.Type;
+                    sb.Append($"                ConvertValue(dynamicSource.{name}, typeof({type})) is {type} {name.ToLowerInvariant()}Value ? {name.ToLowerInvariant()}Value : default({type})");
+                    if (i < properties.Count - 1)
+                        sb.AppendLine(",");
+                    else
+                        sb.AppendLine();
+                }
+                sb.AppendLine("            );");
+            }
+            else
+            {
+                // Class/Struct property assignment
+                sb.AppendLine($"            var target = new {typeName}();");
+                sb.AppendLine();
+                
+                foreach (var property in properties)
+                {
+                    var name = property.Name;
+                    var type = property.Type;
+                    sb.AppendLine($"            try");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                target.{name} = ConvertValue(dynamicSource.{name}, typeof({type})) is {type} {name.ToLowerInvariant()}Value ? {name.ToLowerInvariant()}Value : default({type});");
+                    sb.AppendLine("            }");
+                    sb.AppendLine($"            catch");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                target.{name} = default({type});");
+                    sb.AppendLine("            }");
+                    sb.AppendLine();
+                }
+                
+                sb.AppendLine("            return target;");
+            }
+
+            sb.AppendLine("        }");
+            sb.AppendLine();
+
+            // Generate single object converter for strongly-typed objects
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// ?? **Converts** strongly-typed object to {typeName}");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        public static {typeName} FromTyped<T>(T source)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (source == null)");
+            sb.AppendLine($"                throw new ArgumentNullException(nameof(source));");
+            sb.AppendLine();
+            sb.AppendLine("            var sourceType = typeof(T);");
+            sb.AppendLine();
+
+            // Generate property extraction and mapping code based on generation mode
+            if (callInfo.GenerationMode == TypeGenerationMode.Record)
+            {
+                // Record constructor parameters - extract values using reflection
+                foreach (var property in properties)
+                {
+                    var name = property.Name;
+                    var type = property.Type;
+                    sb.AppendLine($"            var {name.ToLowerInvariant()}Prop = sourceType.GetProperty(\"{name}\");");
+                    sb.AppendLine($"            var {name.ToLowerInvariant()}Value = {name.ToLowerInvariant()}Prop?.GetValue(source);");
+                    sb.AppendLine($"            var {name.ToLowerInvariant()}Converted = ConvertValue({name.ToLowerInvariant()}Value, typeof({type}));");
+                }
+                sb.AppendLine();
+                
+                sb.AppendLine($"            return new {typeName}(");
+                for (int i = 0; i < properties.Count; i++)
+                {
+                    var property = properties[i];
+                    var name = property.Name;
+                    var type = property.Type;
+                    sb.Append($"                {name.ToLowerInvariant()}Converted is {type} {name.ToLowerInvariant()}Final ? {name.ToLowerInvariant()}Final : default({type})");
+                    if (i < properties.Count - 1)
+                        sb.AppendLine(",");
+                    else
+                        sb.AppendLine();
+                }
+                sb.AppendLine("            );");
+            }
+            else
+            {
+                // Class/Struct property assignment using reflection
+                sb.AppendLine($"            var target = new {typeName}();");
+                sb.AppendLine();
+                
+                foreach (var property in properties)
+                {
+                    var name = property.Name;
+                    var type = property.Type;
+                    sb.AppendLine($"            var {name.ToLowerInvariant()}Prop = sourceType.GetProperty(\"{name}\");");
+                    sb.AppendLine($"            if ({name.ToLowerInvariant()}Prop != null)");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                var {name.ToLowerInvariant()}Value = {name.ToLowerInvariant()}Prop.GetValue(source);");
+                    sb.AppendLine($"                var {name.ToLowerInvariant()}Converted = ConvertValue({name.ToLowerInvariant()}Value, typeof({type}));");
+                    sb.AppendLine($"                if ({name.ToLowerInvariant()}Converted is {type} {name.ToLowerInvariant()}Final)");
+                    sb.AppendLine($"                    target.{name} = {name.ToLowerInvariant()}Final;");
+                    sb.AppendLine("            }");
+                    sb.AppendLine();
+                }
+                
+                sb.AppendLine("            return target;");
+            }
+
+            sb.AppendLine("        }");
+            sb.AppendLine();
+
+            // Generate converters for named types (A, B -> CombinedType)
+            GenerateNamedTypeConverters(sb, callInfo, typeName);
+
+            // Generate smart value converter helper method
+            sb.AppendLine("        /// <summary>");
+            sb.AppendLine("        /// ?? **Smart Value Converter** - Handles intelligent type conversion");
+            sb.AppendLine("        /// </summary>");
+            sb.AppendLine("        private static object? ConvertValue(object? sourceValue, Type targetType)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            if (sourceValue == null)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                var underlyingType = Nullable.GetUnderlyingType(targetType);");
+            sb.AppendLine("                if (underlyingType != null)");
+            sb.AppendLine("                    return null;");
+            sb.AppendLine("                ");
+            sb.AppendLine("                if (targetType.IsValueType)");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    if (targetType == typeof(int)) return 0;");
+            sb.AppendLine("                    if (targetType == typeof(long)) return 0L;");
+            sb.AppendLine("                    if (targetType == typeof(float)) return 0f;");
+            sb.AppendLine("                    if (targetType == typeof(double)) return 0.0;");
+            sb.AppendLine("                    if (targetType == typeof(decimal)) return 0m;");
+            sb.AppendLine("                    if (targetType == typeof(bool)) return false;");
+            sb.AppendLine("                    if (targetType == typeof(DateTime)) return DateTime.MinValue;");
+            sb.AppendLine("                    if (targetType == typeof(Guid)) return Guid.Empty;");
+            sb.AppendLine("                }");
+            sb.AppendLine("                ");
+            sb.AppendLine("                return null;");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine("            var sourceType = sourceValue.GetType();");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (targetType.IsAssignableFrom(sourceType))");
+            sb.AppendLine("                return sourceValue;");
+            sb.AppendLine();
+            sb.AppendLine("            var underlyingTargetType = Nullable.GetUnderlyingType(targetType) ?? targetType;");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(string))");
+            sb.AppendLine("                return sourceValue.ToString();");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(int))");
+            sb.AppendLine("                return Convert.ToInt32(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(long))");
+            sb.AppendLine("                return Convert.ToInt64(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(float))");
+            sb.AppendLine("                return Convert.ToSingle(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(double))");
+            sb.AppendLine("                return Convert.ToDouble(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(decimal))");
+            sb.AppendLine("                return Convert.ToDecimal(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(bool))");
+            sb.AppendLine("                return Convert.ToBoolean(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(DateTime))");
+            sb.AppendLine("                return Convert.ToDateTime(sourceValue);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            if (underlyingTargetType == typeof(Guid))");
+            sb.AppendLine("            {");
+            sb.AppendLine("                if (sourceValue is string guidString)");
+            sb.AppendLine("                    return Guid.Parse(guidString);");
+            sb.AppendLine("                return (Guid)sourceValue;");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine("            if (underlyingTargetType.IsEnum)");
+            sb.AppendLine("            {");
+            sb.AppendLine("                if (sourceValue is string stringValue)");
+            sb.AppendLine("                    return Enum.Parse(underlyingTargetType, stringValue, true);");
+            sb.AppendLine("                return Enum.ToObject(underlyingTargetType, sourceValue);");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine("            try");
+            sb.AppendLine("            {");
+            sb.AppendLine("                return Convert.ChangeType(sourceValue, underlyingTargetType);");
+            sb.AppendLine("            }");
+            sb.AppendLine("            catch");
+            sb.AppendLine("            {");
+            sb.AppendLine("                return sourceValue;");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Generate converters for named types (A, B -> CombinedType)
+        /// </summary>
+        private static void GenerateNamedTypeConverters(StringBuilder sb, GenerateCallInfo callInfo, string typeName)
+        {
+            if (callInfo.SourceTypes.Count == 0)
+                return;
+
+            var properties = CollectProperties(callInfo);
+
+            // Generate individual type converters
+            for (int i = 0; i < callInfo.SourceTypes.Count; i++)
+            {
+                var sourceType = callInfo.SourceTypes[i];
+                var sourceTypeName = sourceType.Name;
+                var methodName = $"From{sourceTypeName}";
+
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// ?? **Converts** {sourceTypeName} instance to {typeName}");
+                sb.AppendLine($"        /// </summary>");
+                sb.AppendLine($"        public static {typeName} {methodName}({sourceType.ToDisplayString()} source)");
+                sb.AppendLine("        {");
+                sb.AppendLine("            if (source == null)");
+                sb.AppendLine($"                throw new ArgumentNullException(nameof(source));");
+                sb.AppendLine();
+
+                var sourceProperties = sourceType.GetMembers()
+                    .OfType<IPropertySymbol>()
+                    .Where(p => p.DeclaredAccessibility == Accessibility.Public)
+                    .ToList();
+
+                if (callInfo.GenerationMode == TypeGenerationMode.Record)
+                {
+                    // Record constructor
+                    sb.AppendLine($"            return new {typeName}(");
+                    for (int j = 0; j < properties.Count; j++)
+                    {
+                        var property = properties[j];
+                        var propName = property.Name;
+                        var propType = property.Type;
+                        var sourceProperty = sourceProperties.FirstOrDefault(sp => sp.Name == propName);
+                        
+                        if (sourceProperty != null)
+                        {
+                            sb.Append($"                source.{propName}");
+                        }
+                        else
+                        {
+                            sb.Append($"                default({propType})");
+                        }
+                        
+                        if (j < properties.Count - 1)
+                            sb.AppendLine(",");
+                        else
+                            sb.AppendLine();
+                    }
+                    sb.AppendLine("            );");
+                }
+                else
+                {
+                    // Class/Struct property assignment
+                    sb.AppendLine($"            var target = new {typeName}();");
+                    foreach (var property in properties)
+                    {
+                        var propName = property.Name;
+                        var sourceProperty = sourceProperties.FirstOrDefault(sp => sp.Name == propName);
+                        if (sourceProperty != null)
+                        {
+                            sb.AppendLine($"            target.{propName} = source.{propName};");
+                        }
+                    }
+                    sb.AppendLine("            return target;");
+                }
+
+                sb.AppendLine("        }");
+                sb.AppendLine();
+            }
+
+            // Generate combined converter if there are multiple source types
+            if (callInfo.SourceTypes.Count > 1)
+            {
+                var methodParams = string.Join(", ", callInfo.SourceTypes.Select((st, idx) => 
+                    $"{st.ToDisplayString()} source{idx + 1}"));
+
+                sb.AppendLine($"        /// <summary>");
+                sb.AppendLine($"        /// ?? **Converts** multiple source types to {typeName}");
+                sb.AppendLine($"        /// </summary>");
+                sb.AppendLine($"        public static {typeName} FromBoth({methodParams})");
+                sb.AppendLine("        {");
+                
+                foreach (var (st, idx) in callInfo.SourceTypes.Select((st, idx) => (st, idx)))
+                {
+                    sb.AppendLine($"            if (source{idx + 1} == null)");
+                    sb.AppendLine($"                throw new ArgumentNullException(nameof(source{idx + 1}));");
+                }
+                sb.AppendLine();
+
+                if (callInfo.GenerationMode == TypeGenerationMode.Record)
+                {
+                    // Record constructor
+                    sb.AppendLine($"            return new {typeName}(");
+                    for (int j = 0; j < properties.Count; j++)
+                    {
+                        var property = properties[j];
+                        var propName = property.Name;
+                        var propType = property.Type;
+                        var foundSource = false;
+                        
+                        // Find which source type has this property
+                        for (int k = 0; k < callInfo.SourceTypes.Count; k++)
+                        {
+                            var sourceProperties = callInfo.SourceTypes[k].GetMembers()
+                                .OfType<IPropertySymbol>()
+                                .Where(p => p.DeclaredAccessibility == Accessibility.Public);
+                            
+                            if (sourceProperties.Any(sp => sp.Name == propName))
+                            {
+                                sb.Append($"                source{k + 1}.{propName}");
+                                foundSource = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundSource)
+                        {
+                            sb.Append($"                default({propType})");
+                        }
+                        
+                        if (j < properties.Count - 1)
+                            sb.AppendLine(",");
+                        else
+                            sb.AppendLine();
+                    }
+                    sb.AppendLine("            );");
+                }
+                else
+                {
+                    // Class/Struct property assignment
+                    sb.AppendLine($"            var target = new {typeName}();");
+                    foreach (var property in properties)
+                    {
+                        var propName = property.Name;
+                        // Find which source type has this property
+                        for (int k = 0; k < callInfo.SourceTypes.Count; k++)
+                        {
+                            var sourceProperties = callInfo.SourceTypes[k].GetMembers()
+                                .OfType<IPropertySymbol>()
+                                .Where(p => p.DeclaredAccessibility == Accessibility.Public);
+                            
+                            if (sourceProperties.Any(sp => sp.Name == propName))
+                            {
+                                sb.AppendLine($"            target.{propName} = source{k + 1}.{propName};");
+                                break;
+                            }
+                        }
+                    }
+                    sb.AppendLine("            return target;");
+                }
+
+                sb.AppendLine("        }");
+                sb.AppendLine();
+            }
+        }
+
+        /// <summary>
+        /// Get type keyword for the generation mode
+        /// </summary>
+        private static string GetTypeKeyword(TypeGenerationMode mode)
+        {
+            return mode switch
+            {
+                TypeGenerationMode.Record => "record",
+                TypeGenerationMode.Class => "class",
+                TypeGenerationMode.Struct => "struct",
+                _ => "class"
+            };
+        }
+
+        /// <summary>
+        /// Check if type is a reference type
         /// </summary>
         private static bool IsReferenceType(string typeName)
         {
-            // 값 타입들
+            // Value types
             var valueTypes = new HashSet<string>
             {
                 "int", "long", "float", "double", "decimal", "bool", "byte", "sbyte",
@@ -679,23 +1153,23 @@ namespace Structura.SourceGenerators
                 "System.Char", "System.DateTime", "System.Guid"
             };
 
-            // Nullable 타입인 경우 (이미 nullable이므로 required 불필요)
+            // Nullable types (already nullable, don't need required)
             if (typeName.EndsWith("?"))
                 return false;
 
-            // 값 타입인 경우
+            // Value types
             if (valueTypes.Contains(typeName))
                 return false;
 
-            // 구조체 타입인 경우 (struct 키워드가 포함된 타입들은 값 타입)
-            // 여기서는 간단히 일반적인 경우만 처리
-            return true; // 대부분의 경우 참조 타입으로 가정
+            // Struct types (types with struct keyword are value types)
+            // Here we handle only general cases
+            return true; // Most remaining types are reference types
         }
 
         private static List<(string Name, string Type)> CollectProperties(GenerateCallInfo callInfo)
         {
             var properties = new List<(string Name, string Type)>();
-            // 기존 소스 타입들로부터 속성 추가 (TypeSymbol 기반)
+            // Add properties from existing source types (using TypeSymbol information)
             foreach (var sourceType in callInfo.SourceTypes)
             {
                 foreach (var member in sourceType.GetMembers())
@@ -708,7 +1182,7 @@ namespace Structura.SourceGenerators
                 }
             }
 
-            // Exclude 작업 처리
+            // Handle Exclude operations
             var excludedProperties = new HashSet<string>();
             foreach (var operation in callInfo.Operations)
             {
@@ -719,10 +1193,10 @@ namespace Structura.SourceGenerators
                 }
             }
 
-            // 제외된 속성 제거
+            // Remove excluded properties
             properties = properties.Where(p => !excludedProperties.Contains(p.Name)).ToList();
 
-            // 다른 작업들 처리
+            // Handle other operations
             foreach (var operation in callInfo.Operations)
             {
                 switch (operation.OperationType)
@@ -751,7 +1225,7 @@ namespace Structura.SourceGenerators
                     case FluentOperationType.ChangeType:
                         if (operation.PropertyName != null && operation.PropertyType != null)
                         {
-                            // 기존 속성의 타입 변경
+                            // Change type of existing property
                             for (int i = 0; i < properties.Count; i++)
                             {
                                 if (properties[i].Name == operation.PropertyName)
@@ -770,7 +1244,7 @@ namespace Structura.SourceGenerators
 
         private static string FormatTypeName(ITypeSymbol typeSymbol)
         {
-            // C# 키워드로 변환
+            // Convert to C# keywords
             return typeSymbol.SpecialType switch
             {
                 SpecialType.System_String => "string",
@@ -786,13 +1260,14 @@ namespace Structura.SourceGenerators
         }
     }
 
-    // 지원 클래스들
+    // Helper classes
     public class GenerateCallInfo
     {
         public string TargetTypeName { get; set; } = "";
         public List<INamedTypeSymbol> SourceTypes { get; set; } = new List<INamedTypeSymbol>();
         public List<FluentOperation> Operations { get; set; } = new List<FluentOperation>();
         public TypeGenerationMode GenerationMode { get; set; } = TypeGenerationMode.Record;
+        public bool EnableConverter { get; set; } = false;
     }
 
     public class FluentChainInfo
@@ -801,6 +1276,7 @@ namespace Structura.SourceGenerators
         public List<INamedTypeSymbol> SourceTypes { get; set; } = new List<INamedTypeSymbol>();
         public List<FluentOperation> Operations { get; set; } = new List<FluentOperation>();
         public TypeGenerationMode GenerationMode { get; set; } = TypeGenerationMode.Record;
+        public bool EnableConverter { get; set; } = false;
     }
 
     public class FluentOperation
@@ -822,6 +1298,7 @@ namespace Structura.SourceGenerators
         ChangeType,
         With,
         WithProjection,
+        WithConverter,
         AsRecord,
         AsClass,
         AsStruct

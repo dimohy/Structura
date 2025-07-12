@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Structura.Tests
 {
     /// <summary>
-    /// 변수 참조 처리 기능 테스트
+    /// Variable reference handling tests
     /// </summary>
     public class VariableReferenceTests
     {
@@ -14,7 +14,7 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                var anonymousInstance = new { Name = "홍길동", Age = 40, Sex = "male" };
+                var anonymousInstance = new { Name = "John Doe", Age = 40, Sex = "male" };
                 TypeCombiner.Combine()
                     .With(anonymousInstance)
                     .WithName("VariableReferenceTest1")
@@ -33,7 +33,7 @@ namespace Structura.Tests
             {
                 var userInfo = new { 
                     Id = Guid.NewGuid(), 
-                    Name = "테스트사용자", 
+                    Name = "TestUser", 
                     Email = "test@example.com",
                     IsActive = true,
                     CreatedAt = DateTime.Now,
@@ -56,8 +56,8 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                var personalData = new { FirstName = "홍", LastName = "길동", Age = 30 };
-                var contactData = new { Email = "hong@example.com", Phone = "010-1234-5678" };
+                var personalData = new { FirstName = "John", LastName = "Doe", Age = 30 };
+                var contactData = new { Email = "john@example.com", Phone = "010-1234-5678" };
                 
                 TypeCombiner.Combine()
                     .With(personalData)
@@ -76,7 +76,7 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                var additionalInfo = new { Department = "개발팀", Position = "시니어", Salary = 50000m };
+                var additionalInfo = new { Department = "Development", Position = "Senior", Salary = 50000m };
                 
                 TypeCombiner.Combine<User>()
                     .With(additionalInfo)
@@ -97,8 +97,8 @@ namespace Structura.Tests
                 var userInfo = new { UserId = 123, Username = "testuser" };
                 
                 TypeCombiner.Combine()
-                    .With(userInfo) // 변수 참조
-                    .With(new { CreatedAt = DateTime.Now, IsActive = true }) // 직접 생성
+                    .With(userInfo) // Variable reference
+                    .With(new { CreatedAt = DateTime.Now, IsActive = true }) // Direct creation
                     .WithName("VariableReferenceTest5")
                     .AsRecord()
                     .Generate();
@@ -161,7 +161,7 @@ namespace Structura.Tests
             var exception = Record.Exception(() =>
             {
                 var nullableData = new { 
-                    Name = "테스트",
+                    Name = "Test",
                     OptionalValue = (string?)null,
                     NullableInt = (int?)null,
                     NullableDate = (DateTime?)DateTime.Now
@@ -180,14 +180,14 @@ namespace Structura.Tests
         [Fact]
         public void VariableReference_WithProjection_Should_Work()
         {
-            // Arrange & Act & Assert - EF Core projection 시나리오
+            // Arrange & Act & Assert - EF Core projection scenario
             var exception = Record.Exception(() =>
             {
                 // var result = dbContext.Users.Select(x => new { x.Name, x.Email }).ToList();
                 var projectionResult = new List<object>
                 {
-                    new { Name = "홍길동", Email = "hong@example.com" },
-                    new { Name = "김철수", Email = "kim@example.com" }
+                    new { Name = "John Doe", Email = "john@example.com" },
+                    new { Name = "Jane Smith", Email = "jane@example.com" }
                 };
                 
                 TypeCombiner.Combine()
@@ -202,17 +202,17 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 원래 문제 시나리오 재현 테스트
+    /// Original problem scenario tests
     /// </summary>
     public class OriginalProblemScenarioTests
     {
         [Fact]
         public void OriginalProblem_AnonymousInstanceVariable_Should_Work()
         {
-            // Arrange & Act & Assert - 원래 문제가 되었던 코드
+            // Arrange & Act & Assert - Previously problematic code
             var exception = Record.Exception(() =>
             {
-                var anonymousInstance = new { Name = "홍길동", Age = 40, Sex = "male" };
+                var anonymousInstance = new { Name = "John Doe", Age = 40, Sex = "male" };
                 TypeCombiner.Combine()
                     .With(anonymousInstance)
                     .WithName("AnonymousUser")
@@ -228,20 +228,20 @@ namespace Structura.Tests
         {
             // Arrange & Act & Assert
             
-            // 직접 생성 (원래 작동하던 방식)
+            // Direct creation (previously working approach)
             var directException = Record.Exception(() =>
             {
                 TypeCombiner.Combine()
-                    .With(new { Name = "홍길동", Age = 40, Sex = "male" })
+                    .With(new { Name = "John Doe", Age = 40, Sex = "male" })
                     .WithName("DirectAnonymousUser")
                     .AsClass()
                     .Generate();
             });
 
-            // 변수 참조 (개선된 기능)
+            // Variable reference (improved approach)
             var variableException = Record.Exception(() =>
             {
-                var anonymousInstance = new { Name = "홍길동", Age = 40, Sex = "male" };
+                var anonymousInstance = new { Name = "John Doe", Age = 40, Sex = "male" };
                 TypeCombiner.Combine()
                     .With(anonymousInstance)
                     .WithName("VariableAnonymousUser")
@@ -256,15 +256,15 @@ namespace Structura.Tests
         [Fact]
         public void OriginalProblem_RealWorldScenario_Should_Work()
         {
-            // Arrange & Act & Assert - 실제 사용 시나리오
+            // Arrange & Act & Assert - Real world scenario
             var exception = Record.Exception(() =>
             {
-                // 다양한 소스에서 온 데이터를 변수로 저장
-                var userBasicInfo = new { Name = "김개발", Age = 28, Email = "kim@company.com" };
-                var jobInfo = new { Department = "개발팀", Position = "시니어", StartDate = DateTime.Now.AddYears(-3) };
-                var settings = new { Theme = "Dark", Language = "Korean", NotificationsEnabled = true };
+                // Data from various sources in actual application
+                var userBasicInfo = new { Name = "Jane Developer", Age = 28, Email = "jane@company.com" };
+                var jobInfo = new { Department = "Development", Position = "Senior", StartDate = DateTime.Now.AddYears(-3) };
+                var settings = new { Theme = "Dark", Language = "English", NotificationsEnabled = true };
 
-                // 모든 정보를 결합하여 새로운 타입 생성
+                // Combine all data to create new type
                 TypeCombiner.Combine()
                     .With(userBasicInfo)
                     .With(jobInfo)
@@ -280,16 +280,16 @@ namespace Structura.Tests
         [Fact]
         public void OriginalProblem_EFCoreProjectionScenario_Should_Work()
         {
-            // Arrange & Act & Assert - EF Core 사용 시나리오
+            // Arrange & Act & Assert - EF Core projection scenario
             var exception = Record.Exception(() =>
             {
-                // 실제 EF Core에서 이런 식으로 사용될 수 있음
+                // In real EF Core this would be like:
                 // var result = dbContext.Users.Select(x => new { x.Name }).ToList();
                 var result = new List<object>
                 {
-                    new { Name = "홍길동" },
-                    new { Name = "김철수" },
-                    new { Name = "이영희" }
+                    new { Name = "John Doe" },
+                    new { Name = "Jane Smith" },
+                    new { Name = "Bob Johnson" }
                 };
 
                 TypeCombiner.Combine()
@@ -304,7 +304,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 향상된 소스 생성기 통합 테스트
+    /// Enhanced source generator tests
     /// </summary>
     public class EnhancedSourceGeneratorIntegrationTests
     {
@@ -312,7 +312,7 @@ namespace Structura.Tests
         public void EnhancedSourceGenerator_Should_HandleVariableReferences()
         {
             // Arrange
-            var anonymousInstance = new { Name = "테스트", Age = 25, IsActive = true };
+            var anonymousInstance = new { Name = "Test", Age = 25, IsActive = true };
             
             TypeCombiner.Combine()
                 .With(anonymousInstance)
@@ -327,12 +327,12 @@ namespace Structura.Tests
                 Assert.True(enhancedTestType.IsClass);
                 var properties = enhancedTestType.GetProperties();
                 
-                // 예상 속성들이 생성되었는지 확인
+                // Check if expected properties are generated
                 var nameProp = properties.FirstOrDefault(p => p.Name == "Name");
                 var ageProp = properties.FirstOrDefault(p => p.Name == "Age");
                 var isActiveProp = properties.FirstOrDefault(p => p.Name == "IsActive");
 
-                // 변수 참조에서 추출된 속성들이 존재하는지 확인
+                // Verify at least the expected properties exist
                 Assert.True(properties.Length >= 3);
             }
         }
@@ -361,7 +361,7 @@ namespace Structura.Tests
             {
                 var properties = typePreservationTestType.GetProperties().ToDictionary(p => p.Name, p => p.PropertyType);
                 
-                // 타입 정보가 올바르게 보존되었는지 확인
+                // Check if type information is correctly preserved
                 if (properties.ContainsKey("StringValue"))
                     Assert.Equal(typeof(string), properties["StringValue"]);
                     
@@ -395,7 +395,7 @@ namespace Structura.Tests
             {
                 var properties = projectionTestType.GetProperties();
                 
-                // projection에서 추출된 속성들이 존재하는지 확인
+                // Check if properties from projection are correctly extracted
                 var userIdProp = properties.FirstOrDefault(p => p.Name == "UserId");
                 var userNameProp = properties.FirstOrDefault(p => p.Name == "UserName");
                 var emailProp = properties.FirstOrDefault(p => p.Name == "Email");
@@ -410,7 +410,7 @@ namespace Structura.Tests
             // Arrange
             var projectionResult = new List<object>
             {
-                new { Name = "홍길동", Email = "hong@example.com" }
+                new { Name = "John Doe", Email = "john@example.com" }
             };
             
             var additionalData = new { CreatedAt = DateTime.Now, IsActive = true };
@@ -429,7 +429,7 @@ namespace Structura.Tests
                 Assert.True(combinedType.IsClass);
                 var properties = combinedType.GetProperties();
                 
-                // projection과 추가 데이터에서 모든 속성이 생성되었는지 확인
+                // Check if all properties from projection and additional data are generated
                 Assert.True(properties.Length >= 4); // Name, Email, CreatedAt, IsActive
             }
         }

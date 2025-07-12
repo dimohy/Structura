@@ -1,19 +1,19 @@
 namespace Structura.Tests.TestModels
 {
     /// <summary>
-    /// 테스트용 개인 정보 모델
+    /// Test model for personal information
     /// </summary>
     public class PersonalInfo
     {
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public int Age { get; set; }
-        public string Password { get; set; } = ""; // 제외 테스트용
+        public string Password { get; set; } = ""; // Sensitive property for exclusion testing
         public DateTime BirthDate { get; set; }
     }
 
     /// <summary>
-    /// 테스트용 연락처 정보 모델
+    /// Test model for contact information
     /// </summary>
     public class ContactInfo
     {
@@ -24,7 +24,7 @@ namespace Structura.Tests.TestModels
     }
 
     /// <summary>
-    /// 테스트용 사용자 모델
+    /// Test model for user information
     /// </summary>
     public class User
     {
@@ -35,7 +35,7 @@ namespace Structura.Tests.TestModels
     }
 
     /// <summary>
-    /// 테스트용 제품 모델
+    /// Test model for product information
     /// </summary>
     public class Product
     {
@@ -46,7 +46,7 @@ namespace Structura.Tests.TestModels
     }
 
     /// <summary>
-    /// 테스트용 간단한 모델
+    /// Test model for simple scenarios
     /// </summary>
     public class SimpleModel
     {

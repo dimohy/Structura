@@ -1,10 +1,9 @@
 ﻿using Structura.Tests.TestModels;
-using System.Reflection;
 
 namespace Structura.Tests
 {
     /// <summary>
-    /// Structura 라이브러리의 기본 기능 테스트
+    /// Basic functionality tests for Structura library
     /// </summary>
     public class BasicTypeCombinerTests
     {
@@ -115,7 +114,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 무명 타입 결합 기능 테스트
+    /// Anonymous type combination functionality tests
     /// </summary>
     public class AnonymousTypeCombinerTests
     {
@@ -177,7 +176,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 단일 타입 빌더 테스트
+    /// Single type builder tests
     /// </summary>
     public class SingleTypeCombinerTests
     {
@@ -280,7 +279,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 복합 시나리오 테스트
+    /// Complex scenario tests
     /// </summary>
     public class ComplexScenarioTests
     {
@@ -359,7 +358,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 타입 생성 모드 테스트
+    /// Type generation mode tests
     /// </summary>
     public class TypeGenerationModeTests
     {
@@ -388,7 +387,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 에러 케이스 및 엣지 케이스 테스트
+    /// Edge cases and error handling tests
     /// </summary>
     public class EdgeCaseTests
     {
@@ -455,7 +454,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 플루언트 API 체이닝 테스트
+    /// Fluent API chaining tests
     /// </summary>
     public class FluentApiChainTests
     {
@@ -530,7 +529,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 타입 안전성 테스트
+    /// Type safety tests
     /// </summary>
     public class TypeSafetyTests
     {
@@ -540,7 +539,7 @@ namespace Structura.Tests
             // Arrange
             var builder = TypeCombiner.From<PersonalInfo>();
 
-            // Act & Assert - 컴파일 타임에 타입 안전성 보장
+            // Act & Assert - Compile-time type safety guaranteed
             var result = builder.Exclude(p => p.FirstName);
             Assert.NotNull(result);
         }
@@ -551,7 +550,7 @@ namespace Structura.Tests
             // Arrange
             var builder = TypeCombiner.From<Product>();
 
-            // Act & Assert - 컴파일 타임에 타입 안전성 보장
+            // Act & Assert - Compile-time type safety guaranteed
             var result = builder.ChangeType(p => p.Price, typeof(string));
             Assert.NotNull(result);
         }
@@ -564,7 +563,7 @@ namespace Structura.Tests
             var builderSingleType = TypeCombiner.Combine<User>();
             var builderFromType = TypeCombiner.From<Product>();
 
-            // Assert - 컴파일 타임에 제네릭 타입 매개변수 보존
+            // Assert - Compile-time generic type parameter preservation
             Assert.NotNull(builderTwoTypes);
             Assert.NotNull(builderSingleType);
             Assert.NotNull(builderFromType);

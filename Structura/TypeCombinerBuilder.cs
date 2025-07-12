@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 namespace Structura
 {
     /// <summary>
-    /// µÎ °³ Å¸ÀÔÀ» °áÇÕÇÏ´Â ºô´õ
+    /// Builder for combining two types
     /// </summary>
     public class TypeCombinerBuilder<T1, T2>
     {
@@ -16,14 +16,15 @@ namespace Structura
         private readonly List<(string PropertyName, Type NewType)> _typeChanges = new List<(string, Type)>();
         private readonly List<object> _anonymousTypes = new List<object>();
         private readonly List<IEnumerable> _projectionResults = new List<IEnumerable>();
+        private bool _enableConverter = false;
         
-        // _mode ÇÊµå »ç¿ëµÊ - Generate() ¸Þ¼­µå¿¡¼­ ¼Ò½º »ý¼º±â°¡ ÂüÁ¶
+        // _mode field usage - used by source generator in Generate() method
         #pragma warning disable CS0414
         private TypeGenerationMode _mode = TypeGenerationMode.Record;
         #pragma warning restore CS0414
 
         /// <summary>
-        /// »ý¼ºµÉ Å¸ÀÔÀÇ ÀÌ¸§À» ÁöÁ¤ÇÕ´Ï´Ù.
+        /// Sets the name of the generated type.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> WithName(string typeName)
         {
@@ -32,7 +33,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// ¹«¸í Å¸ÀÔÀ» Ãß°¡ÇÕ´Ï´Ù.
+        /// Adds an anonymous type.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> With(object anonymousType)
         {
@@ -41,9 +42,9 @@ namespace Structura
         }
 
         /// <summary>
-        /// EF Core projection °á°ú¿¡¼­ ½ºÅ°¸¶¸¦ ÃßÃâÇÏ¿© Å¸ÀÔÀ» »ý¼ºÇÕ´Ï´Ù.
+        /// Creates type using EF Core projection results.
         /// </summary>
-        /// <param name="projectionResult">EF Core Select().ToList() °á°ú</param>
+        /// <param name="projectionResult">Result of EF Core Select().ToList()</param>
         public TypeCombinerBuilder<T1, T2> WithProjection(IEnumerable projectionResult)
         {
             _projectionResults.Add(projectionResult);
@@ -51,7 +52,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// Æ¯Á¤ ¼Ó¼ºÀ» Á¦¿ÜÇÕ´Ï´Ù.
+        /// Excludes a specific property.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> Exclude<T>(Expression<Func<T, object?>> propertyExpression)
         {
@@ -61,7 +62,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// »õ·Î¿î ¼Ó¼ºÀ» Ãß°¡ÇÕ´Ï´Ù.
+        /// Adds a new property.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> Add(string propertyName, Type propertyType, object? defaultValue = null)
         {
@@ -70,7 +71,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// ±âÁ¸ ¼Ó¼ºÀÇ Å¸ÀÔÀ» º¯°æÇÕ´Ï´Ù.
+        /// Changes the type of an existing property.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> ChangeType<T>(Expression<Func<T, object?>> propertyExpression, Type newType)
         {
@@ -80,7 +81,29 @@ namespace Structura
         }
 
         /// <summary>
-        /// ·¹ÄÚµå Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// ðŸŽ¯ **Enables Smart Converter** - Generates extension methods to convert anonymous objects to strong types
+        /// When enabled, generates methods like: anonymousCollection.ToTypeName() and anonymousObject.ToTypeName()
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// TypeCombiner.Combine&lt;PersonalInfo, ContactInfo&gt;()
+        ///     .WithName("UserProfile")
+        ///     .WithConverter()  // ðŸ”¥ This enables the magic!
+        ///     .Generate();
+        ///     
+        /// // Now you can use:
+        /// var anonymousData = new { FirstName = "John", Email = "john@example.com" };
+        /// Generated.UserProfile typed = anonymousData.ToUserProfile();
+        /// </code>
+        /// </example>
+        public TypeCombinerBuilder<T1, T2> WithConverter()
+        {
+            _enableConverter = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Generates as record type.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> AsRecord()
         {
@@ -89,7 +112,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// Å¬·¡½º Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// Generates as class type.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> AsClass()
         {
@@ -98,7 +121,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// ±¸Á¶Ã¼ Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// Generates as struct type.
         /// </summary>
         public TypeCombinerBuilder<T1, T2> AsStruct()
         {
@@ -107,12 +130,12 @@ namespace Structura
         }
 
         /// <summary>
-        /// Å¸ÀÔ »ý¼ºÀ» ½ÇÇàÇÕ´Ï´Ù.
+        /// Generates the type.
         /// </summary>
         public void Generate()
         {
-            // ¼Ò½º »ý¼º±â°¡ ÀÌ ¸Þ¼­µå È£ÃâÀ» °¨ÁöÇÏ¿© ½ÇÁ¦ Å¸ÀÔÀ» »ý¼ºÇÕ´Ï´Ù.
-            // ¸Þ¼­µå ³»ºÎ ±¸ÇöÀº ¼Ò½º »ý¼º±â¿¡¼­ Ã³¸®µÇ¹Ç·Î ºñ¿öµÓ´Ï´Ù.
+            // Source generator will analyze this method call and generate the type based on the configuration.
+            // Method body content is processed by the source generator so it remains empty.
         }
 
         private static string GetPropertyName<T>(Expression<Func<T, object?>> expression)
@@ -130,12 +153,12 @@ namespace Structura
     }
 
     /// <summary>
-    /// ´ÜÀÏ Å¸ÀÔÀ» °áÇÕÇÏ´Â ºô´õ
+    /// Builder for combining a single type
     /// </summary>
     public class TypeCombinerBuilder<T> : TypeCombinerBuilder<T, object>
     {
         /// <summary>
-        /// »ý¼ºµÉ Å¸ÀÔÀÇ ÀÌ¸§À» ÁöÁ¤ÇÕ´Ï´Ù.
+        /// Sets the name of the generated type.
         /// </summary>
         public new TypeCombinerBuilder<T> WithName(string typeName)
         {
@@ -144,7 +167,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// ¹«¸í Å¸ÀÔÀ» Ãß°¡ÇÕ´Ï´Ù.
+        /// Adds an anonymous type.
         /// </summary>
         public new TypeCombinerBuilder<T> With(object anonymousType)
         {
@@ -153,9 +176,9 @@ namespace Structura
         }
 
         /// <summary>
-        /// EF Core projection °á°ú¿¡¼­ ½ºÅ°¸¶¸¦ ÃßÃâÇÏ¿© Å¸ÀÔÀ» »ý¼ºÇÕ´Ï´Ù.
+        /// Creates type using EF Core projection results.
         /// </summary>
-        /// <param name="projectionResult">EF Core Select().ToList() °á°ú</param>
+        /// <param name="projectionResult">Result of EF Core Select().ToList()</param>
         public new TypeCombinerBuilder<T> WithProjection(IEnumerable projectionResult)
         {
             base.WithProjection(projectionResult);
@@ -163,7 +186,16 @@ namespace Structura
         }
 
         /// <summary>
-        /// ·¹ÄÚµå Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// ðŸŽ¯ **Enables Smart Converter** - Generates extension methods to convert anonymous objects to strong types
+        /// </summary>
+        public new TypeCombinerBuilder<T> WithConverter()
+        {
+            base.WithConverter();
+            return this;
+        }
+
+        /// <summary>
+        /// Generates as record type.
         /// </summary>
         public new TypeCombinerBuilder<T> AsRecord()
         {
@@ -172,7 +204,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// Å¬·¡½º Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// Generates as class type.
         /// </summary>
         public new TypeCombinerBuilder<T> AsClass()
         {
@@ -181,7 +213,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// ±¸Á¶Ã¼ Å¸ÀÔÀ¸·Î »ý¼ºÇÕ´Ï´Ù.
+        /// Generates as struct type.
         /// </summary>
         public new TypeCombinerBuilder<T> AsStruct()
         {

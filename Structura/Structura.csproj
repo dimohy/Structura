@@ -5,17 +5,99 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    
+    <!-- Package Information -->
     <PackageId>Structura</PackageId>
-    <PackageVersion>1.0.0</PackageVersion>
-    <PackageDescription>소스 생성기 기반 플루언트 API 타입 조작 라이브러리</PackageDescription>
+    <PackageVersion>0.9.0-beta</PackageVersion>
+    <Title>Structura - Source Generator-Based Type Manipulation Library</Title>
+    <Description>A .NET library that automatically generates new types through source generators when you define type creation and manipulation rules using a fluent API. Supports type combination, anonymous types, EF Core projections, advanced property manipulation, and static converter methods directly on generated types for seamless object conversion.</Description>
+    <Summary>Source generator-based fluent API type manipulation library with static converter methods on generated types for .NET</Summary>
+    <Authors>dimohy</Authors>
+    <Company>dimohy</Company>
+    <Product>Structura</Product>
+    <Copyright>Copyright (c) 2024 dimohy</Copyright>
+    
+    <!-- Package Metadata -->
+    <PackageProjectUrl>https://github.com/dimohy/structura</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dimohy/structura</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>source-generator;fluent-api;type-manipulation;code-generation;csharp;dotnet;types;ef-core;projection;converter;extension-methods</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>
+      Version 0.9.0-beta Release Notes:
+      
+      🚀 New Features:
+      - Complete anonymous type support with variable reference analysis
+      - EF Core projection result type generation
+      - Advanced property manipulation (Add, Exclude, ChangeType)
+      - Support for Records, Classes, and Structs generation
+      - 🆕 Smart Converter Extensions: Revolutionary .WithConverter() method for seamless object conversion
+      - Comprehensive fluent API with method chaining
+      
+      🔧 Improvements:
+      - Enhanced source generator performance
+      - Better type inference and analysis
+      - Improved error handling and validation
+      - 100+ comprehensive unit tests including converter functionality
+      
+      🎯 Beta Features:
+      - Variable reference analysis for anonymous types
+      - EF Core projection support with smart conversion
+      - Complex type combination scenarios
+      - Intelligent type mapping and conversion
+      
+      🌟 Smart Converter Highlights:
+      - Direct static methods on generated types: UserDto.FromCollection()
+      - Strongly-typed anonymous object conversion: UserDto.FromTypedCollection()
+      - Individual object conversion: UserDto.FromTyped(), UserDto.FromSingle()
+      - Named type converters: CombinedType.FromSourceType(), CombinedType.FromBoth()
+      - Intelligent type mapping with null safety
+      - Support for primitives, collections, and complex types
+      - Case-insensitive property matching
+      - Compile-time type safety with full IntelliSense
+      
+      📋 Known Issues:
+      - Some advanced property manipulation scenarios may be limited
+      - Existing type property inheritance is at 95% completion
+      
+      For full documentation and examples, visit: https://github.com/dimohy/structura
+    </PackageReleaseNotes>
+    
+    <!-- Development Dependencies -->
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="bin\**" />
+    <EmbeddedResource Remove="bin\**" />
+    <None Remove="bin\**" />
+  </ItemGroup>
+
+  <!-- Package Files -->
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies -->
+  <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="bin\Debug\netstandard2.0\\Structura.dll" />
+  </ItemGroup>
+
+  <!-- Source Generator Target -->
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers\dotnet\cs\$(AssemblyName).dll" Visible="false" />
   </ItemGroup>
 
 </Project>

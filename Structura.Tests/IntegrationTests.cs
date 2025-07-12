@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Structura.Tests
 {
     /// <summary>
-    /// 소스 생성기 통합 테스트 - 실제 생성된 타입들을 테스트
+    /// Source generator integration tests - Test actual generated types
     /// </summary>
     public class SourceGeneratorIntegrationTests
     {
@@ -25,9 +25,9 @@ namespace Structura.Tests
             {
                 Assert.True(contactType.IsClass);
                 var properties = contactType.GetProperties();
-                Assert.True(properties.Length >= 3); // Name, Age, Sex, Email, Phone 등
+                Assert.True(properties.Length >= 3); // Name, Age, Sex, Email, Phone etc.
             }
-            // 소스 생성기가 아직 완전하지 않을 수 있으므로 null이어도 실패하지 않음
+            // Source generator may not be active during testing, so null is acceptable
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace Structura.Tests
                 Assert.True(extendedUserType.IsClass);
                 var properties = extendedUserType.GetProperties();
                 
-                // 추가된 속성들 확인
+                // Check for added properties
                 var createdAtProp = properties.FirstOrDefault(p => p.Name == "CreatedAt");
                 var lastLoginProp = properties.FirstOrDefault(p => p.Name == "LastLoginAt");
                 var metadataProp = properties.FirstOrDefault(p => p.Name == "Metadata");
@@ -75,7 +75,7 @@ namespace Structura.Tests
             {
                 Assert.True(userProfileType.IsClass);
                 var properties = userProfileType.GetProperties();
-                Assert.True(properties.Length >= 0); // 결합된 타입의 속성들
+                Assert.True(properties.Length >= 0); // Properties from combined types
             }
         }
 
@@ -96,7 +96,7 @@ namespace Structura.Tests
                 var properties = publicPersonalInfoType.GetProperties();
                 var passwordProp = properties.FirstOrDefault(p => p.Name == "Password");
                 
-                // Password 속성이 제외되었는지 확인
+                // Check that Password property is excluded
                 Assert.Null(passwordProp);
             }
         }
@@ -120,7 +120,7 @@ namespace Structura.Tests
                 var priceProp = properties.FirstOrDefault(p => p.Name == "Price");
                 var stockProp = properties.FirstOrDefault(p => p.Name == "StockQuantity");
 
-                // 타입이 변경되었는지 확인
+                // Check that types are changed correctly
                 if (priceProp != null)
                     Assert.Equal(typeof(string), priceProp.PropertyType);
                 if (stockProp != null)
@@ -151,7 +151,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 성능 테스트
+    /// Performance tests
     /// </summary>
     public class PerformanceTests
     {
@@ -173,7 +173,7 @@ namespace Structura.Tests
 
             stopwatch.Stop();
 
-            // Assert - 100번 실행이 5초 이내에 완료되어야 함
+            // Assert - Should complete 100 generations within 5 seconds
             Assert.True(stopwatch.ElapsedMilliseconds < 5000, 
                 $"Performance test failed: {stopwatch.ElapsedMilliseconds}ms for {iterations} iterations");
         }
@@ -186,7 +186,7 @@ namespace Structura.Tests
             {
                 var builder = TypeCombiner.From<User>();
                 
-                // 매우 긴 체인 생성
+                // Very long chain creation
                 for (int i = 0; i < 50; i++)
                 {
                     builder = builder.Add($"Property{i}", typeof(string));
@@ -200,7 +200,7 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 실제 사용 시나리오 테스트
+    /// Real world scenario tests
     /// </summary>
     public class RealWorldScenarioTests
     {
@@ -210,7 +210,7 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                // README.md 예시와 동일한 시나리오
+                // Scenario from README.md examples
                 TypeCombiner.From<PersonalInfo>()
                     .Exclude(u => u.Password)
                     .Add("PublicId", typeof(Guid))
@@ -228,11 +228,11 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                // README.md 예시와 동일한 시나리오
+                // Scenario from README.md examples
                 TypeCombiner.From<User>()
                     .Add("CreatedAt", typeof(DateTime))
                     .Add("UpdatedAt", typeof(DateTime?))
-                    .ChangeType(u => u.IsActive, typeof(int)) // bool -> int 변환
+                    .ChangeType(u => u.IsActive, typeof(int)) // bool -> int conversion
                     .WithName("ModernUserTable")
                     .Generate();
             });
@@ -246,7 +246,7 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                // Program.cs와 동일한 시나리오
+                // Scenario from Program.cs examples
                 TypeCombiner.Combine<User>()
                     .With(new { Department = "", Salary = 0m, Position = "" })
                     .WithName("Employee")
@@ -263,7 +263,7 @@ namespace Structura.Tests
             // Arrange & Act & Assert
             var exception = Record.Exception(() =>
             {
-                // Program.cs와 동일한 복합 시나리오
+                // Complex scenario from Program.cs examples
                 TypeCombiner.Combine<PersonalInfo, ContactInfo>()
                     .Exclude<PersonalInfo>(p => p.Password)
                     .Exclude<PersonalInfo>(p => p.BirthDate)
@@ -298,14 +298,14 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// 문서화된 기능 테스트 (README.md 기반)
+    /// Documented features tests (README.md examples)
     /// </summary>
     public class DocumentedFeaturesTests
     {
         [Fact]
         public void DocumentedFeature_TypeCombination_Should_Work()
         {
-            // README.md 첫 번째 예시
+            // First example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.Combine<PersonalInfo, ContactInfo>()
@@ -320,7 +320,7 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_AnonymousTypesSupport_Should_Work()
         {
-            // README.md 무명 타입 예시들
+            // Anonymous types support from README.md
             var exception1 = Record.Exception(() =>
             {
                 TypeCombiner.Combine<User>()
@@ -346,7 +346,7 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_PropertyExclusion_Should_Work()
         {
-            // README.md 속성 제외 예시
+            // Property exclusion example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.From<PersonalInfo>()
@@ -361,7 +361,7 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_PropertyAddition_Should_Work()
         {
-            // README.md 속성 추가 예시
+            // Property addition example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.From<User>()
@@ -378,12 +378,12 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_TypeChange_Should_Work()
         {
-            // README.md 타입 변경 예시
+            // Type change example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.From<Product>()
-                    .ChangeType(e => e.Price, typeof(string))      // decimal → string
-                    .ChangeType(e => e.StockQuantity, typeof(string)) // int → string
+                    .ChangeType(e => e.Price, typeof(string))      // decimal to string
+                    .ChangeType(e => e.StockQuantity, typeof(string)) // int to string
                     .WithName("EmployeeDto")
                     .Generate();
             });
@@ -394,13 +394,13 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_ComplexOperation_Should_Work()
         {
-            // README.md 복합 조작 예시
+            // Complex operation example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.Combine<PersonalInfo, ContactInfo>()
-                    .Exclude<PersonalInfo>(p => p.Password)                       // 민감한 정보 제외
-                    .Add("LastLoginAt", typeof(DateTime?))          // 새 속성 추가
-                    .ChangeType<ContactInfo>(c => c.PhoneNumber, typeof(string)) // 타입 변경
+                    .Exclude<PersonalInfo>(p => p.Password)                       // Exclude sensitive property
+                    .Add("LastLoginAt", typeof(DateTime?))          // Add new property
+                    .ChangeType<ContactInfo>(c => c.PhoneNumber, typeof(string)) // Change type
                     .WithName("SecureUserProfile")
                     .AsRecord()
                     .Generate();
@@ -412,7 +412,7 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_CollectionTypes_Should_Work()
         {
-            // README.md 컬렉션 타입 예시
+            // Collection types example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.From<User>()
@@ -428,7 +428,7 @@ namespace Structura.Tests
         [Fact]
         public void DocumentedFeature_ConditionalExclusion_Should_Work()
         {
-            // README.md 조건부 속성 제외 예시
+            // Conditional property exclusion example from README.md
             var exception = Record.Exception(() =>
             {
                 TypeCombiner.From<PersonalInfo>()

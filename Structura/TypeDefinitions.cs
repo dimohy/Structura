@@ -4,22 +4,22 @@ using System.Collections.Generic;
 namespace Structura
 {
     /// <summary>
-    /// 타입 생성 모드를 정의합니다.
+    /// Defines the type generation mode.
     /// </summary>
     public enum TypeGenerationMode
     {
         /// <summary>
-        /// 레코드 타입으로 생성
+        /// Generate as record type
         /// </summary>
         Record,
         
         /// <summary>
-        /// 클래스 타입으로 생성
+        /// Generate as class type
         /// </summary>
         Class,
         
         /// <summary>
-        /// 구조체 타입으로 생성
+        /// Generate as struct type
         /// </summary>
         Struct
     }

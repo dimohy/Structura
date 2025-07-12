@@ -7,21 +7,22 @@ using System.Linq.Expressions;
 namespace Structura
 {
     /// <summary>
-    /// 무명 타입들만을 결합하는 빌더
+    /// Builder for combining anonymous types only
     /// </summary>
     public class AnonymousTypeCombinerBuilder
     {
         private string _typeName = string.Empty;
         private readonly List<object> _anonymousTypes = new List<object>();
         private readonly List<IEnumerable> _projectionResults = new List<IEnumerable>();
+        private bool _enableConverter = false;
         
-        // _mode 필드 사용됨 - Generate() 메서드에서 소스 생성기가 참조
+        // _mode field usage - used by source generator in Generate() method
         #pragma warning disable CS0414 
         private TypeGenerationMode _mode = TypeGenerationMode.Record;
         #pragma warning restore CS0414
 
         /// <summary>
-        /// 생성될 타입의 이름을 지정합니다.
+        /// Sets the name of the generated type.
         /// </summary>
         public AnonymousTypeCombinerBuilder WithName(string typeName)
         {
@@ -30,7 +31,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 무명 타입을 추가합니다.
+        /// Adds an anonymous type.
         /// </summary>
         public AnonymousTypeCombinerBuilder With(object anonymousType)
         {
@@ -39,9 +40,9 @@ namespace Structura
         }
 
         /// <summary>
-        /// EF Core projection 결과에서 스키마를 추출하여 타입을 생성합니다.
+        /// Creates type using EF Core projection results.
         /// </summary>
-        /// <param name="projectionResult">EF Core Select().ToList() 결과</param>
+        /// <param name="projectionResult">Result of EF Core Select().ToList()</param>
         public AnonymousTypeCombinerBuilder WithProjection(IEnumerable projectionResult)
         {
             _projectionResults.Add(projectionResult);
@@ -49,7 +50,29 @@ namespace Structura
         }
 
         /// <summary>
-        /// 레코드 타입으로 생성합니다.
+        /// ?? **Enables Smart Converter** - Generates extension methods to convert anonymous objects to strong types
+        /// When enabled, generates methods like: anonymousCollection.ToTypeName() and anonymousObject.ToTypeName()
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// TypeCombiner.Combine()
+        ///     .WithProjection(efCoreResult)
+        ///     .WithName("UserDto")
+        ///     .WithConverter()  // ?? This enables the magic!
+        ///     .Generate();
+        ///     
+        /// // Now you can use:
+        /// List&lt;Generated.UserDto&gt; typed = efCoreResult.ToUserDto();
+        /// </code>
+        /// </example>
+        public AnonymousTypeCombinerBuilder WithConverter()
+        {
+            _enableConverter = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Generates as record type.
         /// </summary>
         public AnonymousTypeCombinerBuilder AsRecord()
         {
@@ -58,7 +81,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 클래스 타입으로 생성합니다.
+        /// Generates as class type.
         /// </summary>
         public AnonymousTypeCombinerBuilder AsClass()
         {
@@ -67,7 +90,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 구조체 타입으로 생성합니다.
+        /// Generates as struct type.
         /// </summary>
         public AnonymousTypeCombinerBuilder AsStruct()
         {
@@ -76,17 +99,17 @@ namespace Structura
         }
 
         /// <summary>
-        /// 타입 생성을 실행합니다.
+        /// Generates the type.
         /// </summary>
         public void Generate()
         {
-            // 소스 생성기가 이 메서드 호출을 감지하여 실제 타입을 생성합니다.
-            // 메서드 내부 구현은 소스 생성기에서 처리되므로 비워둡니다.
+            // Source generator will analyze this method call and generate the type based on the configuration.
+            // Method body content is processed by the source generator so it remains empty.
         }
     }
 
     /// <summary>
-    /// 단일 타입을 기반으로 새로운 타입을 생성하는 빌더
+    /// Builder for creating new types based on existing types
     /// </summary>
     public class SingleTypeCombinerBuilder<T>
     {
@@ -97,14 +120,15 @@ namespace Structura
         private readonly List<object> _anonymousTypes = new List<object>();
         private readonly List<IEnumerable> _projectionResults = new List<IEnumerable>();
         private readonly List<(string PropertyName, bool Condition)> _conditionalExclusions = new List<(string, bool)>();
+        private bool _enableConverter = false;
         
-        // _mode 필드 사용됨 - Generate() 메서드에서 소스 생성기가 참조
+        // _mode field usage - used by source generator in Generate() method
         #pragma warning disable CS0414
         private TypeGenerationMode _mode = TypeGenerationMode.Record;
         #pragma warning restore CS0414
 
         /// <summary>
-        /// 생성될 타입의 이름을 지정합니다.
+        /// Sets the name of the generated type.
         /// </summary>
         public SingleTypeCombinerBuilder<T> WithName(string typeName)
         {
@@ -113,7 +137,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 특정 속성을 제외합니다.
+        /// Excludes a specific property.
         /// </summary>
         public SingleTypeCombinerBuilder<T> Exclude(Expression<Func<T, object?>> propertyExpression)
         {
@@ -123,7 +147,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 조건부로 속성을 제외합니다.
+        /// Conditionally excludes a property.
         /// </summary>
         public SingleTypeCombinerBuilder<T> ExcludeIf(Expression<Func<T, object?>> propertyExpression, bool condition)
         {
@@ -133,7 +157,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 새로운 속성을 추가합니다.
+        /// Adds a new property.
         /// </summary>
         public SingleTypeCombinerBuilder<T> Add(string propertyName, Type propertyType, object? defaultValue = null)
         {
@@ -142,7 +166,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 기존 속성의 타입을 변경합니다.
+        /// Changes the type of an existing property.
         /// </summary>
         public SingleTypeCombinerBuilder<T> ChangeType(Expression<Func<T, object?>> propertyExpression, Type newType)
         {
@@ -152,7 +176,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 무명 타입을 추가합니다.
+        /// Adds an anonymous type.
         /// </summary>
         public SingleTypeCombinerBuilder<T> With(object anonymousType)
         {
@@ -161,9 +185,9 @@ namespace Structura
         }
 
         /// <summary>
-        /// EF Core projection 결과에서 스키마를 추출하여 타입을 생성합니다.
+        /// Creates type using EF Core projection results.
         /// </summary>
-        /// <param name="projectionResult">EF Core Select().ToList() 결과</param>
+        /// <param name="projectionResult">Result of EF Core Select().ToList()</param>
         public SingleTypeCombinerBuilder<T> WithProjection(IEnumerable projectionResult)
         {
             _projectionResults.Add(projectionResult);
@@ -171,7 +195,29 @@ namespace Structura
         }
 
         /// <summary>
-        /// 레코드 타입으로 생성합니다.
+        /// ?? **Enables Smart Converter** - Generates extension methods to convert anonymous objects to strong types
+        /// When enabled, generates methods like: anonymousCollection.ToTypeName() and anonymousObject.ToTypeName()
+        /// </summary>
+        /// <example>
+        /// <code>
+        /// TypeCombiner.From&lt;User&gt;()
+        ///     .WithProjection(efCoreResult)
+        ///     .WithName("EnhancedUser")
+        ///     .WithConverter()  // ?? This enables the magic!
+        ///     .Generate();
+        ///     
+        /// // Now you can use:
+        /// List&lt;Generated.EnhancedUser&gt; typed = efCoreResult.ToEnhancedUser();
+        /// </code>
+        /// </example>
+        public SingleTypeCombinerBuilder<T> WithConverter()
+        {
+            _enableConverter = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Generates as record type.
         /// </summary>
         public SingleTypeCombinerBuilder<T> AsRecord()
         {
@@ -180,7 +226,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 클래스 타입으로 생성합니다.
+        /// Generates as class type.
         /// </summary>
         public SingleTypeCombinerBuilder<T> AsClass()
         {
@@ -189,7 +235,7 @@ namespace Structura
         }
 
         /// <summary>
-        /// 구조체 타입으로 생성합니다.
+        /// Generates as struct type.
         /// </summary>
         public SingleTypeCombinerBuilder<T> AsStruct()
         {
@@ -198,12 +244,12 @@ namespace Structura
         }
 
         /// <summary>
-        /// 타입 생성을 실행합니다.
+        /// Generates the type.
         /// </summary>
         public void Generate()
         {
-            // 소스 생성기가 이 메서드 호출을 감지하여 실제 타입을 생성합니다.
-            // 메서드 내부 구현은 소스 생성기에서 처리되므로 비워둡니다.
+            // Source generator will analyze this method call and generate the type based on the configuration.
+            // Method body content is processed by the source generator so it remains empty.
         }
 
         private static string GetPropertyName(Expression<Func<T, object?>> expression)

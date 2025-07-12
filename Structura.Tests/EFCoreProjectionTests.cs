@@ -1,22 +1,21 @@
 using Structura.Tests.TestModels;
-using System.Reflection;
 
 namespace Structura.Tests
 {
     /// <summary>
-    /// EF Core projection 결과에서 타입 생성 기능 테스트
+    /// EF Core projection result type generation tests
     /// </summary>
     public class EFCoreProjectionTests
     {
         [Fact]
         public void EFCoreProjection_SimpleProjection_Should_Work()
         {
-            // Arrange - EF Core Select projection 시나리오 시뮬레이션
+            // Arrange - EF Core Select projection scenario simulation
             var projectionResult = new List<object>
             {
-                new { Name = "홍길동", Age = 30 },
-                new { Name = "김철수", Age = 25 },
-                new { Name = "이영희", Age = 28 }
+                new { Name = "John Doe", Age = 30 },
+                new { Name = "Jane Smith", Age = 25 },
+                new { Name = "Bob Johnson", Age = 28 }
             };
 
             // Act & Assert
@@ -35,12 +34,12 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_ComplexProjection_Should_Work()
         {
-            // Arrange - 복잡한 projection 시나리오
+            // Arrange - Complex projection scenario
             var complexProjection = new List<object>
             {
                 new { 
                     UserId = Guid.NewGuid(), 
-                    Name = "사용자1", 
+                    Name = "User1", 
                     Email = "user1@example.com",
                     CreatedAt = DateTime.Now,
                     IsActive = true,
@@ -48,7 +47,7 @@ namespace Structura.Tests
                 },
                 new { 
                     UserId = Guid.NewGuid(), 
-                    Name = "사용자2", 
+                    Name = "User2", 
                     Email = "user2@example.com",
                     CreatedAt = DateTime.Now.AddDays(-1),
                     IsActive = false,
@@ -72,7 +71,7 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_EmptyList_Should_Work()
         {
-            // Arrange - 빈 projection 결과
+            // Arrange - Empty projection list
             var emptyProjection = new List<object>();
 
             // Act & Assert
@@ -91,10 +90,10 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_WithAdditionalProperties_Should_Work()
         {
-            // Arrange - projection 결과에 추가 속성 결합
+            // Arrange - Projection combined with additional properties
             var projectionResult = new List<object>
             {
-                new { Name = "홍길동", Email = "hong@example.com" }
+                new { Name = "John Doe", Email = "john@example.com" }
             };
 
             // Act & Assert
@@ -114,10 +113,10 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_WithExistingType_Should_Work()
         {
-            // Arrange - projection과 기존 타입 결합
+            // Arrange - Projection combined with existing type
             var projectionResult = new List<object>
             {
-                new { Department = "개발팀", Position = "시니어" }
+                new { Department = "Development", Position = "Senior" }
             };
 
             // Act & Assert
@@ -136,15 +135,15 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_MultipleProjections_Should_Work()
         {
-            // Arrange - 여러 projection 결과 결합
+            // Arrange - Multiple projection combinations
             var userProjection = new List<object>
             {
-                new { Name = "홍길동", Age = 30 }
+                new { Name = "John Doe", Age = 30 }
             };
 
             var profileProjection = new List<object>
             {
-                new { Bio = "개발자", Location = "서울" }
+                new { Bio = "Developer", Location = "Seoul" }
             };
 
             // Act & Assert
@@ -164,13 +163,13 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_RealWorldScenario_Should_Work()
         {
-            // Arrange - 실제 EF Core 사용 시나리오 시뮬레이션
+            // Arrange - Real EF Core scenario simulation
             // var result = dbContext.Users.Select(x => new { x.Name, x.Email, x.Department.Name }).ToList();
             var efCoreResult = new List<object>
             {
-                new { Name = "김개발", Email = "kim@company.com", DepartmentName = "개발팀" },
-                new { Name = "박디자인", Email = "park@company.com", DepartmentName = "디자인팀" },
-                new { Name = "최마케팅", Email = "choi@company.com", DepartmentName = "마케팅팀" }
+                new { Name = "Jane Developer", Email = "jane@company.com", DepartmentName = "Development" },
+                new { Name = "John Designer", Email = "john@company.com", DepartmentName = "Design" },
+                new { Name = "Alice Manager", Email = "alice@company.com", DepartmentName = "Management" }
             };
 
             // Act & Assert
@@ -194,7 +193,7 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_WithCollectionTypes_Should_Work()
         {
-            // Arrange - 컬렉션이 포함된 projection
+            // Arrange - Projection with collection types
             var projectionWithCollections = new List<object>
             {
                 new { 
@@ -221,11 +220,11 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_NullableTypes_Should_Work()
         {
-            // Arrange - nullable 타입이 포함된 projection
+            // Arrange - Projection with nullable types
             var projectionWithNullables = new List<object>
             {
                 new { 
-                    Name = "테스트사용자",
+                    Name = "TestUser",
                     LastLogin = (DateTime?)DateTime.Now,
                     OptionalField = (string?)null,
                     NullableAge = (int?)25
@@ -248,12 +247,12 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreProjection_ShouldExtractSchemaFromFirstItem()
         {
-            // Arrange - 첫 번째 항목에서 스키마 추출 테스트
+            // Arrange - Test schema extraction from first item
             var projectionResult = new List<object>
             {
-                new { Name = "홍길동", Age = 30, Email = "hong@example.com" },
-                new { Name = "김철수", Age = 25, Email = "kim@example.com" },
-                // 다른 구조를 가진 항목들도 첫 번째 항목의 스키마를 따라야 함
+                new { Name = "John Doe", Age = 30, Email = "john@example.com" },
+                new { Name = "Jane Smith", Age = 25, Email = "jane@example.com" },
+                // Other items should follow the schema from the first item
             };
 
             TypeCombiner.Combine()
@@ -262,7 +261,7 @@ namespace Structura.Tests
                 .AsRecord()
                 .Generate();
 
-            // Act & Assert - 생성된 타입 확인
+            // Act & Assert - Check generated type
             var generatedType = Type.GetType("Generated.SchemaExtractionTest");
             if (generatedType != null)
             {
@@ -276,22 +275,22 @@ namespace Structura.Tests
     }
 
     /// <summary>
-    /// EF Core 통합 시나리오 테스트
+    /// EF Core integration scenario tests
     /// </summary>
     public class EFCoreIntegrationScenarioTests
     {
         [Fact]
         public void EFCoreIntegration_UserDashboard_Should_Work()
         {
-            // Arrange - 사용자 대시보드 데이터 시나리오
+            // Arrange - User dashboard data scenario
             // var dashboardData = dbContext.Users
             //     .Select(u => new { u.Name, u.Email, OrderCount = u.Orders.Count() })
             //     .ToList();
             
             var dashboardData = new List<object>
             {
-                new { Name = "홍길동", Email = "hong@example.com", OrderCount = 5 },
-                new { Name = "김철수", Email = "kim@example.com", OrderCount = 3 }
+                new { Name = "John Doe", Email = "john@example.com", OrderCount = 5 },
+                new { Name = "Jane Smith", Email = "jane@example.com", OrderCount = 3 }
             };
 
             // Act & Assert
@@ -315,7 +314,7 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreIntegration_ReportGeneration_Should_Work()
         {
-            // Arrange - 보고서 생성 시나리오
+            // Arrange - Report generation scenario
             // var reportData = dbContext.Sales
             //     .GroupBy(s => s.ProductCategory)
             //     .Select(g => new { Category = g.Key, TotalSales = g.Sum(s => s.Amount) })
@@ -349,7 +348,7 @@ namespace Structura.Tests
         [Fact]
         public void EFCoreIntegration_ApiDto_Should_Work()
         {
-            // Arrange - API DTO 생성 시나리오
+            // Arrange - API DTO creation scenario
             // var apiData = dbContext.Products
             //     .Where(p => p.IsActive)
             //     .Select(p => new { p.Name, p.Price, CategoryName = p.Category.Name })
