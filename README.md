@@ -293,6 +293,7 @@ Structura is validated with **89 comprehensive unit tests**:
 - **Execution Time**: < 1 second
 
 ## 📁 Project Structure
+```
 Structura/
 ├── 📂 Structura/                     # Main library
 │   ├── TypeCombiner.cs               # Fluent API entry point
@@ -309,6 +310,8 @@ Structura/
 │   ├── IntegrationTests.cs          # Integration and scenario tests
 │   └── TestModels.cs                # Test model classes
 └── 📄 README.md                     # Documentation
+```
+
 ## 📈 Development Status
 
 ### ✅ Completed Features
