@@ -427,7 +427,9 @@ Structura/
 │   ├── IntegrationTests.cs          # Integration and scenario tests
 │   └── TestModels.cs                # Test model classes
 └── 📄 README.md                     # Documentation
-```## 📈 Development Status
+```
+
+## 📈 Development Status
 
 ### ✅ Completed Features
 
