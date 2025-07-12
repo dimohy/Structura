@@ -1,4 +1,6 @@
-﻿# Structura
+﻿![Structura Logo](logo.png)
+
+# Structura
 
 **Source Generator-Based Fluent API Type Manipulation Library**
 
